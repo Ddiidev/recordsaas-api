@@ -13,16 +13,60 @@ interface CheckoutRequest {
   locale: string;
 }
 
-const PRICE_MAP: Record<string, Record<string, string>> = {
-  pro: {
-    global: "price_1T3gxULZ5gTFc3B2JwluosIr", // $10/month
-    br: "price_1T3gxVLZ5gTFc3B2W4p6tlyg",     // $5/month (Brazil)
-  },
-  lifetime: {
-    global: "price_1T3gxWLZ5gTFc3B2XJRErpzK", // $87 one-time
-    br: "price_1T3gxWLZ5gTFc3B21lCKdpV9",     // $35 one-time (Brazil)
-  },
+// Product names must match exactly in Stripe (both test and live mode)
+const PRODUCT_NAMES: Record<string, string> = {
+  pro: "RecordSaaS Pro",
+  lifetime: "RecordSaaS Lifetime",
 };
+
+// Cache to avoid repeated API calls within the same Lambda invocation
+let priceCache: Record<string, Record<string, string>> | null = null;
+
+async function getPriceMap(stripe: Stripe): Promise<Record<string, Record<string, string>>> {
+  if (priceCache) return priceCache;
+
+  const priceMap: Record<string, Record<string, string>> = {
+    pro: {},
+    lifetime: {},
+  };
+
+  for (const [plan, productName] of Object.entries(PRODUCT_NAMES)) {
+    // Search products by name
+    const products = await stripe.products.search({
+      query: `name:"${productName}"`,
+      limit: 1,
+    });
+
+    if (products.data.length === 0) {
+      throw new Error(`Product "${productName}" not found in Stripe. Create it first.`);
+    }
+
+    const product = products.data[0];
+
+    // Get all active prices for this product
+    const prices = await stripe.prices.list({
+      product: product.id,
+      active: true,
+      limit: 10,
+    });
+
+    for (const price of prices.data) {
+      const currency = price.currency.toLowerCase();
+      if (currency === "brl") {
+        priceMap[plan].br = price.id;
+      } else if (currency === "usd") {
+        priceMap[plan].global = price.id;
+      }
+    }
+
+    if (!priceMap[plan].global) {
+      throw new Error(`No USD price found for "${productName}". Create one in Stripe.`);
+    }
+  }
+
+  priceCache = priceMap;
+  return priceMap;
+}
 
 function isBrazilLocale(locale: string): boolean {
   const normalized = locale.toLowerCase().trim();
@@ -59,7 +103,7 @@ export default async (req: Request, context: Context) => {
       );
     }
 
-    if (!PRICE_MAP[plan]) {
+    if (!["pro", "lifetime"].includes(plan)) {
       return new Response(
         JSON.stringify({ error: "Invalid plan. Use 'pro' or 'lifetime'" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
@@ -67,11 +111,13 @@ export default async (req: Request, context: Context) => {
     }
 
     const region = isBrazilLocale(locale || "") ? "br" : "global";
-    const priceId = PRICE_MAP[plan][region];
     const mode = plan === "pro" ? "subscription" : "payment";
 
     const stripe = getStripe();
 
+    // Dynamic price lookup — works with both test and live Stripe keys
+    const priceMap = await getPriceMap(stripe);
+    const priceId = priceMap[plan][region] || priceMap[plan].global; // fallback to global if BR price missing
     // Find or create customer by email
     const existingCustomers = await stripe.customers.list({ email, limit: 1 });
     let customerId: string;
