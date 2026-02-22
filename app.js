@@ -8,9 +8,11 @@ let currentUser = null;
 let sessionToken = null;
 
 const PRICES = {
-  pro: { global: 10, br: 5 },
-  lifetime: { global: 87, br: 35 },
+  pro: { global: 10, br: 25 },
+  lifetime: { global: 87, br: 175 },
 };
+
+const CURRENCY = { global: '$', br: 'R$' };
 
 // ======================== REGION TOGGLE ========================
 function setRegion(region) {
@@ -42,6 +44,11 @@ function updatePricingUI() {
 
   pricePro.textContent = PRICES.pro[currentRegion];
   priceLifetime.textContent = PRICES.lifetime[currentRegion];
+
+  // Update currency symbols
+  document.querySelectorAll('.pricing-currency').forEach(el => {
+    el.textContent = CURRENCY[currentRegion];
+  });
 }
 
 // ======================== GOOGLE AUTH ========================

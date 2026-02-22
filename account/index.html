@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>My Account — RecordSaaS</title>
+  <link rel="icon" href="../assets/logo.png" type="image/png">
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <style>
+    :root {
+      --green: hsl(154, 60%, 42%);
+      --green-light: hsl(154, 60%, 95%);
+      --green-dark: hsl(154, 65%, 32%);
+      --text: hsl(210, 20%, 18%);
+      --text-muted: hsl(210, 10%, 55%);
+      --bg: hsl(0, 0%, 97%);
+      --card-bg: hsl(0, 0%, 100%);
+      --border: hsl(210, 15%, 92%);
+      --red: hsl(0, 72%, 58%);
+      --red-light: hsl(0, 72%, 96%);
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
+
+    /* Navbar */
+    .navbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 16px 32px; background: var(--card-bg);
+      border-bottom: 1px solid var(--border);
+    }
+    .navbar-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.2rem;
+      text-decoration: none; color: var(--text);
+    }
+    .navbar-brand img { height: 32px; }
+    .navbar-brand span { color: var(--green); }
+    .navbar-links { display: flex; gap: 12px; list-style: none; }
+    .navbar-links a {
+      padding: 8px 16px; border-radius: 8px; text-decoration: none;
+      color: var(--text-muted); font-size: 0.9rem; font-weight: 500; transition: all 0.2s;
+    }
+    .navbar-links a:hover { background: var(--green-light); color: var(--green); }
+
+    /* Main */
+    .main { max-width: 640px; margin: 0 auto; padding: 48px 24px; }
+    .page-title { font-family: 'Outfit', sans-serif; font-size: 1.75rem; font-weight: 700; margin-bottom: 8px; }
+    .page-sub { color: var(--text-muted); margin-bottom: 32px; font-size: 0.95rem; }
+
+    /* Cards */
+    .card {
+      background: var(--card-bg); border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px; margin-bottom: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+    }
+    .card-header {
+      display: flex; align-items: center; gap: 16px; margin-bottom: 16px;
+    }
+    .card-avatar {
+      width: 56px; height: 56px; border-radius: 50%; object-fit: cover;
+      border: 2px solid var(--border);
+    }
+    .card-name { font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 1.1rem; }
+    .card-email { color: var(--text-muted); font-size: 0.9rem; }
+    .card-label { font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 600; margin-bottom: 8px; }
+
+    /* Badge */
+    .badge {
+      display: inline-block; padding: 4px 12px; border-radius: 20px;
+      font-size: 0.8rem; font-weight: 600;
+    }
+    .badge-active { background: var(--green-light); color: var(--green); }
+    .badge-inactive { background: hsl(210,15%,94%); color: var(--text-muted); }
+    .badge-cancelled { background: var(--red-light); color: var(--red); }
+
+    /* Plan details */
+    .plan-row {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 12px 0; border-bottom: 1px solid var(--border);
+    }
+    .plan-row:last-child { border-bottom: none; }
+    .plan-label { color: var(--text-muted); font-size: 0.9rem; }
+    .plan-value { font-weight: 600; font-size: 0.9rem; }
+
+    /* Buttons */
+    .btn {
+      padding: 12px 24px; border-radius: 10px; font-weight: 600;
+      font-size: 0.9rem; cursor: pointer; border: none; transition: all 0.2s;
+      text-decoration: none; display: inline-block;
+    }
+    .btn-green { background: var(--green); color: #fff; }
+    .btn-green:hover { background: var(--green-dark); transform: translateY(-1px); }
+    .btn-danger { background: var(--red-light); color: var(--red); border: 1px solid hsl(0,50%,90%); }
+    .btn-danger:hover { background: hsl(0,72%,92%); }
+    .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
+    .btn-ghost:hover { background: hsl(210,15%,96%); }
+    .btn-group { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
+
+    /* Login prompt */
+    .login-prompt {
+      text-align: center; padding: 64px 24px;
+    }
+    .login-prompt h2 { font-family: 'Outfit', sans-serif; margin-bottom: 12px; }
+    .login-prompt p { color: var(--text-muted); margin-bottom: 24px; }
+    #g-btn-account { display: flex; justify-content: center; }
+
+    /* Modal */
+    .modal-overlay {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+      z-index: 100; align-items: center; justify-content: center;
+    }
+    .modal-overlay.active { display: flex; }
+    .modal {
+      background: var(--card-bg); border-radius: 20px; padding: 32px;
+      max-width: 420px; width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+      animation: fadeIn 0.3s ease-out;
+    }
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    .modal h3 { font-family: 'Outfit', sans-serif; margin-bottom: 12px; color: var(--red); }
+    .modal p { color: var(--text-muted); font-size: 0.9rem; line-height: 1.6; margin-bottom: 20px; }
+
+    /* Notification */
+    .toast {
+      position: fixed; bottom: 24px; right: 24px; padding: 14px 24px;
+      border-radius: 12px; color: #fff; font-size: 0.9rem; font-weight: 500;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 200;
+      animation: slideUp 0.3s ease-out; max-width: 360px;
+    }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+
+    @media (max-width: 600px) {
+      .main { padding: 32px 16px; }
+      .btn-group { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navbar -->
+  <nav class="navbar">
+    <a href="/" class="navbar-brand">
+      <img src="../assets/logo.png" alt="RecordSaaS logo">
+      Record<span>SaaS</span>
+    </a>
+    <ul class="navbar-links">
+      <li><a href="/">Home</a></li>
+      <li><a href="/#pricing">Pricing</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main content -->
+  <div class="main" id="app">
+    <!-- Login prompt (shown when not logged in) -->
+    <div class="login-prompt" id="login-section" style="display: none;">
+      <h2>Sign in to manage your account</h2>
+      <p>Log in with Google to view your subscription and account details.</p>
+      <div id="g-btn-account"></div>
+    </div>
+
+    <!-- Account content (shown when logged in) -->
+    <div id="account-section" style="display: none;">
+      <h1 class="page-title">My Account</h1>
+      <p class="page-sub">Manage your subscription and profile.</p>
+
+      <!-- Profile Card -->
+      <div class="card">
+        <div class="card-header">
+          <img id="user-avatar" class="card-avatar" src="" alt="" referrerpolicy="no-referrer">
+          <div>
+            <div class="card-name" id="user-name"></div>
+            <div class="card-email" id="user-email"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Plan Card -->
+      <div class="card" id="plan-card">
+        <div class="card-label">Current Plan</div>
+        <div class="plan-row">
+          <span class="plan-label">Plan</span>
+          <span class="plan-value" id="plan-name">—</span>
+        </div>
+        <div class="plan-row">
+          <span class="plan-label">Status</span>
+          <span id="plan-status"><span class="badge badge-inactive">No active plan</span></span>
+        </div>
+        <div class="plan-row" id="plan-renew-row" style="display: none;">
+          <span class="plan-label">Next billing</span>
+          <span class="plan-value" id="plan-renew">—</span>
+        </div>
+        <div class="btn-group" id="plan-actions">
+          <a href="/#pricing" class="btn btn-green">View Plans</a>
+        </div>
+      </div>
+
+      <!-- Logout -->
+      <div style="text-align: center; margin-top: 24px;">
+        <button class="btn btn-ghost" onclick="logoutAccount()">Sign out</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Cancel Confirmation Modal -->
+  <div class="modal-overlay" id="cancel-modal">
+    <div class="modal">
+      <h3>Cancel Subscription?</h3>
+      <p>Your Pro features will remain active until the end of your current billing period. After that, your account will revert to the free tier.</p>
+      <div class="btn-group" style="justify-content: flex-end;">
+        <button class="btn btn-ghost" onclick="closeModal()">Keep Subscription</button>
+        <button class="btn btn-danger" id="confirm-cancel-btn" onclick="confirmCancel()">Yes, Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = window.location.origin;
+    const GOOGLE_CLIENT_ID = '358891470255-7h1kggp8d1io8947nll6kq51815nbpgp.apps.googleusercontent.com';
+    let sessionToken = null;
+    let currentUser = null;
+    let licenseData = null;
+
+    // ======= INIT =======
+    document.addEventListener('DOMContentLoaded', () => {
+      const savedToken = localStorage.getItem('recordsaas_session');
+      const savedUser = localStorage.getItem('recordsaas_user');
+
+      if (savedToken && savedUser) {
+        sessionToken = savedToken;
+        currentUser = JSON.parse(savedUser);
+        showAccount();
+        fetchLicense();
+      } else {
+        showLogin();
+      }
+    });
+
+    function showLogin() {
+      document.getElementById('login-section').style.display = 'block';
+      document.getElementById('account-section').style.display = 'none';
+
+      setTimeout(() => {
+        if (typeof google !== 'undefined') {
+          google.accounts.id.initialize({
+            client_id: GOOGLE_CLIENT_ID,
+            callback: handleCredential,
+            auto_select: false,
+          });
+          google.accounts.id.renderButton(document.getElementById('g-btn-account'), {
+            type: 'standard', shape: 'pill', theme: 'outline', size: 'large',
+            text: 'signin_with', logo_alignment: 'left',
+          });
+        }
+      }, 100);
+    }
+
+    async function handleCredential(response) {
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/google`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken: response.credential }),
+        });
+        if (!res.ok) throw new Error('Login failed');
+        const data = await res.json();
+        currentUser = data.user;
+        sessionToken = data.sessionToken;
+        localStorage.setItem('recordsaas_session', sessionToken);
+        localStorage.setItem('recordsaas_user', JSON.stringify(currentUser));
+        showAccount();
+        applyLicense(data.license);
+      } catch (e) {
+        showToast('Login failed. Please try again.', 'error');
+      }
+    }
+
+    function showAccount() {
+      document.getElementById('login-section').style.display = 'none';
+      document.getElementById('account-section').style.display = 'block';
+      document.getElementById('user-name').textContent = currentUser.name || '';
+      document.getElementById('user-email').textContent = currentUser.email || '';
+      document.getElementById('user-avatar').src = currentUser.picture || '';
+    }
+
+    async function fetchLicense() {
+      try {
+        const res = await fetch(`${API_BASE}/api/auth/status`, {
+          headers: { 'Authorization': `Bearer ${sessionToken}` },
+        });
+        if (!res.ok) { logoutAccount(); return; }
+        const data = await res.json();
+        applyLicense(data.license);
+      } catch (e) { /* silent */ }
+    }
+
+    function applyLicense(license) {
+      licenseData = license;
+      const planName = document.getElementById('plan-name');
+      const planStatus = document.getElementById('plan-status');
+      const planActions = document.getElementById('plan-actions');
+      const renewRow = document.getElementById('plan-renew-row');
+
+      if (license && license.active) {
+        const name = license.plan === 'lifetime' ? 'Lifetime' : 'Pro Monthly';
+        planName.textContent = name;
+        planStatus.innerHTML = `<span class="badge badge-active">Active</span>`;
+
+        if (license.plan === 'pro' || license.plan === 'subscription') {
+          renewRow.style.display = 'flex';
+          planActions.innerHTML = `
+            <a href="/#pricing" class="btn btn-green">Upgrade to Lifetime</a>
+            <button class="btn btn-danger" onclick="openCancelModal()">Cancel Subscription</button>
+          `;
+        } else {
+          // Lifetime
+          renewRow.style.display = 'none';
+          planActions.innerHTML = `<span style="color: var(--text-muted); font-size: 0.9rem;">Lifetime license — no action needed 🎉</span>`;
+        }
+      } else {
+        planName.textContent = 'Free';
+        planStatus.innerHTML = `<span class="badge badge-inactive">No active plan</span>`;
+        renewRow.style.display = 'none';
+        planActions.innerHTML = `<a href="/#pricing" class="btn btn-green">View Plans</a>`;
+      }
+    }
+
+    // ======= CANCEL =======
+    function openCancelModal() { document.getElementById('cancel-modal').classList.add('active'); }
+    function closeModal() { document.getElementById('cancel-modal').classList.remove('active'); }
+
+    async function confirmCancel() {
+      const btn = document.getElementById('confirm-cancel-btn');
+      btn.textContent = 'Cancelling...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/cancel-subscription`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`,
+          },
+        });
+
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.error || 'Failed to cancel');
+        }
+
+        closeModal();
+        showToast('Subscription cancelled. Pro features remain active until the end of your billing period.', 'success');
+
+        // Refresh license
+        setTimeout(() => fetchLicense(), 1500);
+      } catch (e) {
+        showToast(e.message || 'Failed to cancel. Please try again.', 'error');
+      } finally {
+        btn.textContent = 'Yes, Cancel';
+        btn.disabled = false;
+      }
+    }
+
+    function logoutAccount() {
+      currentUser = null;
+      sessionToken = null;
+      localStorage.removeItem('recordsaas_session');
+      localStorage.removeItem('recordsaas_user');
+      showLogin();
+    }
+
+    function showToast(msg, type) {
+      const existing = document.querySelector('.toast');
+      if (existing) existing.remove();
+      const colors = { success: 'hsl(154,60%,42%)', error: 'hsl(0,72%,58%)', info: 'hsl(215,60%,50%)' };
+      const el = document.createElement('div');
+      el.className = 'toast';
+      el.style.background = colors[type] || colors.info;
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.remove(), 300); }, 4000);
+    }
+  </script>
+</body>
+</html>
