@@ -1,0 +1,18 @@
+{
+  "name": "recordsaas-api",
+  "version": "1.0.0",
+  "description": "Netlify serverless backend for RecordSaaS Stripe payments",
+  "type": "module",
+  "scripts": {
+    "dev": "netlify dev",
+    "build": "tsc"
+  },
+  "dependencies": {
+    "stripe": "^17.5.0"
+  },
+  "devDependencies": {
+    "@netlify/functions": "^3.0.0",
+    "typescript": "^5.5.4",
+    "@types/node": "^22.0.0"
+  }
+}

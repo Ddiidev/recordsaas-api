@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Payment Cancelled — RecordSaaS</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: linear-gradient(135deg, #0f0f23 0%, #1a1a3e 50%, #0f0f23 100%);
+      color: #e0e0e0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      padding: 2rem;
+    }
+    .card {
+      background: rgba(255, 255, 255, 0.05);
+      backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      padding: 3rem;
+      max-width: 480px;
+      width: 100%;
+      text-align: center;
+      animation: fadeIn 0.6s ease-out;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .icon { font-size: 4rem; margin-bottom: 1.5rem; }
+    h1 {
+      font-size: 1.75rem;
+      font-weight: 700;
+      margin-bottom: 1rem;
+      color: #ff6b6b;
+    }
+    p {
+      color: #a0a0c0;
+      line-height: 1.6;
+      margin-bottom: 2rem;
+    }
+    .cta {
+      display: inline-block;
+      padding: 12px 32px;
+      background: rgba(255, 255, 255, 0.1);
+      color: #e0e0e0;
+      font-weight: 600;
+      border-radius: 12px;
+      text-decoration: none;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      transition: transform 0.2s, background 0.2s;
+    }
+    .cta:hover {
+      transform: translateY(-2px);
+      background: rgba(255, 255, 255, 0.15);
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="icon">🔙</div>
+    <h1>Payment Cancelled</h1>
+    <p>No charges were made. You can close this tab and return to RecordSaaS to try again whenever you're ready.</p>
+    <p style="font-size: 0.85rem; color: #707090;">Nenhuma cobrança foi feita. Você pode fechar esta aba e voltar ao RecordSaaS para tentar novamente quando quiser.</p>
+  </div>
+</body>
+</html>
