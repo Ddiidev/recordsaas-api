@@ -339,7 +339,9 @@ function updateAuthUI() {
   if (currentUser) {
     authContainer.innerHTML = `
       <div class="user-menu">
-        <img src="${currentUser.picture || ''}" alt="${currentUser.name}" class="user-avatar" referrerpolicy="no-referrer">
+        <a href="/account/" style="display: flex;">
+          <img src="${currentUser.picture || ''}" alt="${currentUser.name}" class="user-avatar" referrerpolicy="no-referrer" style="cursor: pointer;">
+        </a>
         <span class="user-name">${currentUser.name}</span>
         <button class="btn btn-ghost" onclick="logout()" style="padding: 6px 12px; font-size: 0.8rem;">Logout</button>
       </div>
