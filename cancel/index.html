@@ -8,7 +8,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700&family=Inter:wght@400;500&display=swap" rel="stylesheet">
   <style>
     :root {
-      --green: hsl(154, 60%, 42%);
+      --primary: hsl(154, 60%, 42%);
       --text: hsl(210, 20%, 18%);
       --text-muted: hsl(210, 10%, 55%);
       --bg: hsl(0, 0%, 99%);
@@ -16,6 +16,18 @@
       --border: hsl(210, 15%, 92%);
       --warn: hsl(35, 90%, 55%);
       --warn-light: hsl(35, 90%, 95%);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: hsl(154, 60%, 50%);
+        --text: hsl(210, 20%, 98%);
+        --text-muted: hsl(215, 16%, 65%);
+        --bg: hsl(215, 16%, 16%);
+        --card-bg: hsl(215, 16%, 18%);
+        --border: hsl(215, 16%, 28%);
+        --warn: hsl(35, 90%, 65%);
+        --warn-light: hsla(35, 90%, 65%, 0.15);
+      }
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
@@ -31,7 +43,7 @@
     .card {
       background: var(--card-bg);
       border: 1px solid var(--border);
-      border-radius: 24px;
+      border-radius: 10px;
       padding: 3rem 2.5rem;
       max-width: 480px;
       width: 100%;
@@ -46,7 +58,7 @@
     .icon {
       width: 72px; height: 72px;
       background: var(--warn-light);
-      border-radius: 50%;
+      border-radius: 8px;
       display: flex; align-items: center; justify-content: center;
       margin: 0 auto 1.5rem;
     }
@@ -62,10 +74,10 @@
     .btn {
       display: inline-block;
       padding: 14px 32px;
-      background: var(--green);
+      background: var(--primary);
       color: #fff;
       font-weight: 600;
-      border-radius: 12px;
+      border-radius: 5px;
       text-decoration: none;
       font-size: 0.95rem;
       transition: all 0.2s;

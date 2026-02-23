@@ -9,9 +9,9 @@
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     :root {
-      --green: hsl(154, 60%, 42%);
-      --green-light: hsl(154, 60%, 95%);
-      --green-dark: hsl(154, 65%, 32%);
+      --primary: hsl(154, 60%, 42%);
+      --primary-light: hsl(154, 60%, 95%);
+      --primary-dark: hsl(154, 65%, 32%);
       --text: hsl(210, 20%, 18%);
       --text-muted: hsl(210, 10%, 55%);
       --bg: hsl(0, 0%, 97%);
@@ -19,6 +19,22 @@
       --border: hsl(210, 15%, 92%);
       --red: hsl(0, 72%, 58%);
       --red-light: hsl(0, 72%, 96%);
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --primary: hsl(154, 60%, 50%);
+        --primary-light: hsla(154, 60%, 50%, 0.15);
+        --primary-dark: hsl(154, 60%, 40%);
+        --text: hsl(210, 20%, 98%);
+        --text-muted: hsl(215, 16%, 65%);
+        --bg: hsl(215, 16%, 16%);
+        --card-bg: hsl(215, 16%, 18%);
+        --border: hsl(215, 16%, 28%);
+        --red: hsl(0, 72%, 65%);
+        --red-light: hsla(0, 72%, 65%, 0.15);
+      }
+      .card { border-color: var(--border); }
+      .card:hover { border-color: var(--primary); }
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; }
@@ -35,13 +51,13 @@
       text-decoration: none; color: var(--text);
     }
     .navbar-brand img { height: 32px; }
-    .navbar-brand span { color: var(--green); }
+    .navbar-brand span { color: var(--primary); }
     .navbar-links { display: flex; gap: 12px; list-style: none; }
     .navbar-links a {
-      padding: 8px 16px; border-radius: 8px; text-decoration: none;
+      padding: 8px 16px; border-radius: 5px; text-decoration: none;
       color: var(--text-muted); font-size: 0.9rem; font-weight: 500; transition: all 0.2s;
     }
-    .navbar-links a:hover { background: var(--green-light); color: var(--green); }
+    .navbar-links a:hover { background: var(--primary-light); color: var(--primary); }
 
     /* Main */
     .main { max-width: 640px; margin: 0 auto; padding: 48px 24px; }
@@ -51,14 +67,14 @@
     /* Cards */
     .card {
       background: var(--card-bg); border: 1px solid var(--border);
-      border-radius: 16px; padding: 24px; margin-bottom: 20px;
+      border-radius: 10px; padding: 24px; margin-bottom: 20px;
       box-shadow: 0 2px 12px rgba(0,0,0,0.04);
     }
     .card-header {
       display: flex; align-items: center; gap: 16px; margin-bottom: 16px;
     }
     .card-avatar {
-      width: 56px; height: 56px; border-radius: 50%; object-fit: cover;
+      width: 56px; height: 56px; border-radius: 8px; object-fit: cover;
       border: 2px solid var(--border);
     }
     .card-name { font-family: 'Outfit', sans-serif; font-weight: 600; font-size: 1.1rem; }
@@ -67,10 +83,10 @@
 
     /* Badge */
     .badge {
-      display: inline-block; padding: 4px 12px; border-radius: 20px;
+      display: inline-block; padding: 4px 12px; border-radius: 5px;
       font-size: 0.8rem; font-weight: 600;
     }
-    .badge-active { background: var(--green-light); color: var(--green); }
+    .badge-active { background: var(--primary-light); color: var(--primary); }
     .badge-inactive { background: hsl(210,15%,94%); color: var(--text-muted); }
     .badge-cancelled { background: var(--red-light); color: var(--red); }
 
@@ -85,16 +101,16 @@
 
     /* Buttons */
     .btn {
-      padding: 12px 24px; border-radius: 10px; font-weight: 600;
-      font-size: 0.9rem; cursor: pointer; border: none; transition: all 0.2s;
+      padding: 12px 24px; border-radius: 5px; font-weight: 600;
+      font-size: 0.9rem; cursor: pointer; border: 1px solid transparent; transition: all 0.2s;
       text-decoration: none; display: inline-block;
     }
-    .btn-green { background: var(--green); color: #fff; }
-    .btn-green:hover { background: var(--green-dark); transform: translateY(-1px); }
-    .btn-danger { background: var(--red-light); color: var(--red); border: 1px solid hsl(0,50%,90%); }
-    .btn-danger:hover { background: hsl(0,72%,92%); }
+    .btn-green { background: var(--primary); color: #fff; }
+    .btn-green:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .btn-danger { background: var(--red-light); color: var(--red); border: 1px solid hsla(0,72%,58%,0.3); }
+    .btn-danger:hover { background: hsla(0,72%,58%,0.2); }
     .btn-ghost { background: transparent; color: var(--text-muted); border: 1px solid var(--border); }
-    .btn-ghost:hover { background: hsl(210,15%,96%); }
+    .btn-ghost:hover { background: var(--bg); border-color: var(--primary); color: var(--primary); }
     .btn-group { display: flex; gap: 12px; margin-top: 16px; flex-wrap: wrap; }
 
     /* Login prompt */
@@ -112,8 +128,9 @@
     }
     .modal-overlay.active { display: flex; }
     .modal {
-      background: var(--card-bg); border-radius: 20px; padding: 32px;
+      background: var(--card-bg); border-radius: 12px; padding: 32px;
       max-width: 420px; width: 90%; box-shadow: 0 12px 40px rgba(0,0,0,0.15);
+      border: 1px solid var(--border);
       animation: fadeIn 0.3s ease-out;
     }
     @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
@@ -123,7 +140,7 @@
     /* Notification */
     .toast {
       position: fixed; bottom: 24px; right: 24px; padding: 14px 24px;
-      border-radius: 12px; color: #fff; font-size: 0.9rem; font-weight: 500;
+      border-radius: 8px; color: #fff; font-size: 0.9rem; font-weight: 500;
       box-shadow: 0 4px 20px rgba(0,0,0,0.15); z-index: 200;
       animation: slideUp 0.3s ease-out; max-width: 360px;
     }
@@ -371,7 +388,7 @@
     function showToast(msg, type) {
       const existing = document.querySelector('.toast');
       if (existing) existing.remove();
-      const colors = { success: 'hsl(154,60%,42%)', error: 'hsl(0,72%,58%)', info: 'hsl(215,60%,50%)' };
+      const colors = { success: 'hsl(154,60%,50%)', error: 'hsl(0,72%,58%)', info: 'hsl(215,60%,50%)' };
       const el = document.createElement('div');
       el.className = 'toast';
       el.style.background = colors[type] || colors.info;

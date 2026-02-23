@@ -134,19 +134,40 @@ function applyI18n() {
   // Update language switch display
   const langFlag = document.getElementById('lang-flag');
   const langCode = document.getElementById('lang-code');
-  if (langFlag) langFlag.textContent = currentLang === 'pt-BR' ? '🇧🇷' : '🇺🇸';
+  if (langFlag) {
+    langFlag.innerHTML = currentLang === 'pt-BR' 
+      ? '<img src="https://flagcdn.com/w20/br.png" alt="BR">' 
+      : '<img src="https://flagcdn.com/w20/us.png" alt="EN">';
+  }
   if (langCode) langCode.textContent = currentLang === 'pt-BR' ? 'PT' : 'EN';
+
+  // Update dropdown active states
+  document.querySelectorAll('.lang-option').forEach(el => el.classList.remove('active'));
+  const activeBtn = document.getElementById(currentLang === 'pt-BR' ? 'btn-lang-pt' : 'btn-lang-en');
+  if (activeBtn) activeBtn.classList.add('active');
 }
 
 function setLang(lang) {
   currentLang = lang;
   localStorage.setItem('recordsaas_lang', lang);
   applyI18n();
+  const langSwitch = document.getElementById('lang-switch');
+  if (langSwitch) langSwitch.classList.remove('open');
 }
 
-function toggleLang() {
-  setLang(currentLang === 'en' ? 'pt-BR' : 'en');
+function toggleLangMenu(event) {
+  if (event) event.preventDefault();
+  const langSwitch = document.getElementById('lang-switch');
+  if (langSwitch) langSwitch.classList.toggle('open');
 }
+
+// Close lang dropdown when clicking outside
+document.addEventListener('click', (e) => {
+  const langSwitch = document.getElementById('lang-switch');
+  if (langSwitch && !langSwitch.contains(e.target)) {
+    langSwitch.classList.remove('open');
+  }
+});
 
 function detectLang() {
   // 1. Check saved preference
