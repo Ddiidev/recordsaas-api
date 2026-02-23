@@ -52,9 +52,9 @@ async function getPriceMap(stripe: Stripe): Promise<Record<string, Record<string
 
     for (const price of prices.data) {
       const currency = price.currency.toLowerCase();
-      if (currency === "brl") {
+      if (currency === "brl" && !priceMap[plan].br) {
         priceMap[plan].br = price.id;
-      } else if (currency === "usd") {
+      } else if (currency === "usd" && !priceMap[plan].global) {
         priceMap[plan].global = price.id;
       }
     }

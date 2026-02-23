@@ -10,14 +10,22 @@ function getStripe(): Stripe {
 interface SessionPayload {
   email: string;
   googleId: string;
-  timestamp: number;
+  timestamp?: number;
+  iat?: number;
+  exp?: number;
 }
 
 function parseSessionToken(token: string): SessionPayload {
   const payload = JSON.parse(atob(token)) as SessionPayload;
-  const thirtyDays = 30 * 24 * 60 * 60 * 1000;
-  if (Date.now() - payload.timestamp > thirtyDays) {
+  if (payload.exp && payload.exp < Date.now()) {
     throw new Error("Session expired");
+  }
+  // Fallback for old format using timestamp
+  if (!payload.exp && payload.timestamp) {
+    const thirtyDays = 30 * 24 * 60 * 60 * 1000;
+    if (Date.now() - payload.timestamp > thirtyDays) {
+      throw new Error("Session expired");
+    }
   }
   return payload;
 }

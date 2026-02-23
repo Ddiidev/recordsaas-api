@@ -100,6 +100,12 @@ export default async (req: Request, context: Context) => {
     const metadata = customer.metadata;
 
     let subscriptionStatus: string | null = null;
+    let isActive = metadata.recordsaas_active === "true";
+    let plan = metadata.recordsaas_plan || null;
+    let region = metadata.recordsaas_region || null;
+    let activatedAt = metadata.recordsaas_activated_at || null;
+
+    // Check subscription if exists
     if (metadata.recordsaas_subscription_id) {
       try {
         const subscription = await stripe.subscriptions.retrieve(
@@ -108,10 +114,75 @@ export default async (req: Request, context: Context) => {
         subscriptionStatus = subscription.status;
 
         if (!["active", "trialing"].includes(subscription.status)) {
-          metadata.recordsaas_active = "false";
+          isActive = false;
         }
       } catch {
         subscriptionStatus = "canceled";
+      }
+    }
+
+    // Fallback: if metadata says inactive, double-check by looking at checkout sessions
+    if (!isActive) {
+      try {
+        // Check for completed checkout sessions for this customer
+        const sessions = await stripe.checkout.sessions.list({
+          customer: customer.id,
+          status: "complete",
+          limit: 5,
+        });
+
+        for (const s of sessions.data) {
+          if (s.payment_status === "paid") {
+            const sPlan = s.metadata?.plan || null;
+            const sRegion = s.metadata?.region || null;
+
+            if (sPlan === "lifetime") {
+              // Lifetime purchase found — activate!
+              isActive = true;
+              plan = "lifetime";
+              region = sRegion || region;
+              activatedAt = activatedAt || new Date(s.created * 1000).toISOString();
+
+              // Backfill metadata
+              await stripe.customers.update(customer.id, {
+                metadata: {
+                  recordsaas_active: "true",
+                  recordsaas_plan: "lifetime",
+                  recordsaas_region: sRegion || "global",
+                  recordsaas_activated_at: activatedAt,
+                },
+              });
+              break;
+            }
+          }
+        }
+
+        // Also check for active subscriptions
+        if (!isActive) {
+          const subs = await stripe.subscriptions.list({
+            customer: customer.id,
+            status: "active",
+            limit: 1,
+          });
+
+          if (subs.data.length > 0) {
+            isActive = true;
+            plan = "pro";
+            subscriptionStatus = subs.data[0].status;
+
+            await stripe.customers.update(customer.id, {
+              metadata: {
+                recordsaas_active: "true",
+                recordsaas_plan: "pro",
+                recordsaas_region: region || "global",
+                recordsaas_activated_at: new Date().toISOString(),
+                recordsaas_subscription_id: subs.data[0].id,
+              },
+            });
+          }
+        }
+      } catch (e) {
+        console.error("Fallback license check failed:", e);
       }
     }
 
@@ -122,10 +193,10 @@ export default async (req: Request, context: Context) => {
           name: customer.name,
         },
         license: {
-          active: metadata.recordsaas_active === "true",
-          plan: metadata.recordsaas_plan || null,
-          region: metadata.recordsaas_region || null,
-          activatedAt: metadata.recordsaas_activated_at || null,
+          active: isActive,
+          plan,
+          region,
+          activatedAt,
           subscriptionStatus,
         },
       }),

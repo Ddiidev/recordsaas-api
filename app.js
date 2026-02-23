@@ -8,8 +8,8 @@ let currentUser = null;
 let sessionToken = null;
 
 const PRICES = {
-  pro: { global: 10, br: 25 },
-  lifetime: { global: 87, br: 175 },
+  pro: { global: 10, br: 27 },
+  lifetime: { global: 87, br: 177 },
 };
 
 const CURRENCY = { global: '$', br: 'R$' };
