@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
 
 :root {
   --primary: hsl(154, 60%, 42%);
@@ -35,7 +35,7 @@ html {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   color: var(--text);
   background: var(--bg);
   line-height: 1.6;
@@ -43,7 +43,7 @@ body {
 }
 
 h1, h2, h3, h4, h5 {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   line-height: 1.2;
 }
@@ -90,9 +90,10 @@ img {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
   font-size: 1.25rem;
+  letter-spacing: -0.02em;
 }
 
 .navbar-brand img {
@@ -103,6 +104,7 @@ img {
 
 .navbar-brand span {
   color: var(--primary);
+  letter-spacing: -0.04em;
 }
 
 .navbar-links {
@@ -124,6 +126,36 @@ img {
   color: var(--text);
 }
 
+.navbar-links a.nav-account {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.lang-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--bg-muted);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text) !important;
+  cursor: pointer;
+  transition: all 0.2s;
+  user-select: none;
+}
+
+.lang-switch:hover {
+  background: var(--primary-light);
+  color: var(--primary) !important;
+}
+
+#lang-flag {
+  font-size: 1rem;
+  line-height: 1;
+}
+
 .navbar-actions {
   display: flex;
   align-items: center;
@@ -138,7 +170,7 @@ img {
   border-radius: var(--radius);
   font-size: 0.9rem;
   font-weight: 600;
-  font-family: 'Inter', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   border: none;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -317,7 +349,7 @@ img {
   align-items: center;
   justify-content: center;
   color: hsl(154, 60%, 50%);
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 1.5rem;
   font-weight: 600;
   gap: 16px;
@@ -564,7 +596,7 @@ img {
 }
 
 .pricing-amount {
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-size: 3.5rem;
   font-weight: 800;
   letter-spacing: -0.03em;
@@ -649,7 +681,7 @@ img {
   display: flex;
   align-items: center;
   gap: 10px;
-  font-family: 'Outfit', sans-serif;
+  font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 700;
 }
 

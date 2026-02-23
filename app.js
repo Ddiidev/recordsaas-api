@@ -1,9 +1,10 @@
 // ======================== CONFIG ========================
 const API_BASE = window.location.origin;
-const GOOGLE_CLIENT_ID = '358891470255-7h1kggp8d1io8947nll6kq51815nbpgp.apps.googleusercontent.com'; // Will be set via env or directly
+const GOOGLE_CLIENT_ID = '358891470255-7h1kggp8d1io8947nll6kq51815nbpgp.apps.googleusercontent.com';
 
 // ======================== STATE ========================
 let currentRegion = 'global';
+let currentLang = 'en';
 let currentUser = null;
 let sessionToken = null;
 
@@ -13,6 +14,155 @@ const PRICES = {
 };
 
 const CURRENCY = { global: '$', br: 'R$' };
+
+// ======================== I18N ========================
+const I18N = {
+  en: {
+    'nav.features': 'Features',
+    'nav.pricing': 'Pricing',
+    'nav.account': 'Account',
+    'hero.badge': 'Professional Screen Recording',
+    'hero.title': 'Record. Edit.<br><span class="highlight">Export like a Pro.</span>',
+    'hero.subtitle': 'Professional screen recording with multi-lane timeline, webcam overlay, cinematic mouse tracking, blur tools, and GPU‑accelerated export up to 2K.',
+    'hero.cta': 'Get Started',
+    'features.title': 'Everything you need to create stunning recordings',
+    'features.subtitle': 'From capture to export, RecordSaaS covers every step of your workflow.',
+    'features.capture.title': 'Flexible Capture',
+    'features.capture.desc': 'Record full screen, a specific window, or custom area with multi-monitor support.',
+    'features.webcam.title': 'Webcam Overlay',
+    'features.webcam.desc': 'Add a personal touch with your camera feed overlaid on the recording.',
+    'features.tracking.title': 'Cinematic Tracking',
+    'features.tracking.desc': 'Smart zoom & pan that follows your mouse, keeping the action in focus.',
+    'features.timeline.title': 'Multi-Lane Timeline',
+    'features.timeline.desc': 'Professional editor with multiple lanes for advanced video compositions.',
+    'features.blur.title': 'Blur & Privacy',
+    'features.blur.desc': 'Native blur tool to hide sensitive content right in the editor timeline.',
+    'features.export.title': 'GPU-Accelerated Export',
+    'features.export.desc': 'Lightning-fast export to MP4 or GIF, up to 2K resolution with hardware acceleration.',
+    'pricing.title': 'Simple, transparent pricing',
+    'pricing.subtitle': 'Choose the plan that fits your workflow. Cancel anytime if you change your mind.',
+    'pricing.pro.name': 'Pro Monthly',
+    'pricing.pro.desc': 'Full access to all Pro features, billed monthly.',
+    'pricing.pro.period': '/month',
+    'pricing.pro.note': 'Cancel anytime, no questions asked.',
+    'pricing.pro.f1': 'All recording features',
+    'pricing.pro.f2': 'Multi-lane timeline editor',
+    'pricing.pro.f3': 'GPU-accelerated export up to 2K',
+    'pricing.pro.f4': 'Priority support',
+    'pricing.pro.cta': 'Subscribe',
+    'pricing.lifetime.name': 'Lifetime',
+    'pricing.lifetime.desc': 'One-time payment, all Pro features forever.',
+    'pricing.lifetime.period': 'one-time payment',
+    'pricing.lifetime.note': 'Pay once, use forever. Free updates included.',
+    'pricing.lifetime.f1': 'Everything in Pro Monthly',
+    'pricing.lifetime.f2': 'Lifetime license — no renewals',
+    'pricing.lifetime.f3': 'All future updates free',
+    'pricing.lifetime.f4': 'Priority support forever',
+    'pricing.lifetime.cta': 'Buy Lifetime',
+    'cta.title': 'Ready to <span class="highlight">level up</span> your recordings?',
+    'cta.subtitle': 'Join thousands of creators, developers, and educators using RecordSaaS.',
+    'cta.btn': 'Get Started Now',
+  },
+  'pt-BR': {
+    'nav.features': 'Recursos',
+    'nav.pricing': 'Preços',
+    'nav.account': 'Conta',
+    'hero.badge': 'Gravação de Tela Profissional',
+    'hero.title': 'Grave. Edite.<br><span class="highlight">Exporte como um Pro.</span>',
+    'hero.subtitle': 'Gravação profissional de tela com timeline multi-faixa, sobreposição de webcam, rastreamento cinemático do mouse, ferramentas de desfoque e exportação acelerada por GPU em até 2K.',
+    'hero.cta': 'Começar Agora',
+    'features.title': 'Tudo que você precisa para criar gravações incríveis',
+    'features.subtitle': 'Da captura à exportação, o RecordSaaS cobre cada etapa do seu fluxo.',
+    'features.capture.title': 'Captura Flexível',
+    'features.capture.desc': 'Grave tela cheia, uma janela específica ou área personalizada com suporte a múltiplos monitores.',
+    'features.webcam.title': 'Sobreposição de Webcam',
+    'features.webcam.desc': 'Adicione um toque pessoal com o feed da sua câmera sobre a gravação.',
+    'features.tracking.title': 'Rastreamento Cinemático',
+    'features.tracking.desc': 'Zoom e pan inteligentes que seguem o mouse, mantendo a ação em foco.',
+    'features.timeline.title': 'Timeline Multi-Faixa',
+    'features.timeline.desc': 'Editor profissional com múltiplas faixas para composições de vídeo avançadas.',
+    'features.blur.title': 'Desfoque e Privacidade',
+    'features.blur.desc': 'Ferramenta nativa de desfoque para ocultar conteúdo sensível direto na timeline.',
+    'features.export.title': 'Exportação com GPU',
+    'features.export.desc': 'Exportação ultrarrápida para MP4 ou GIF, até 2K de resolução com aceleração de hardware.',
+    'pricing.title': 'Preços simples e transparentes',
+    'pricing.subtitle': 'Escolha o plano que se encaixa no seu fluxo. Cancele quando quiser.',
+    'pricing.pro.name': 'Pro Mensal',
+    'pricing.pro.desc': 'Acesso total a todos os recursos Pro, cobrado mensalmente.',
+    'pricing.pro.period': '/mês',
+    'pricing.pro.note': 'Cancele quando quiser, sem perguntas.',
+    'pricing.pro.f1': 'Todos os recursos de gravação',
+    'pricing.pro.f2': 'Editor com timeline multi-faixa',
+    'pricing.pro.f3': 'Exportação com GPU até 2K',
+    'pricing.pro.f4': 'Suporte prioritário',
+    'pricing.pro.cta': 'Assinar',
+    'pricing.lifetime.name': 'Vitalício',
+    'pricing.lifetime.desc': 'Pagamento único, todos os recursos Pro para sempre.',
+    'pricing.lifetime.period': 'pagamento único',
+    'pricing.lifetime.note': 'Pague uma vez, use para sempre. Atualizações inclusas.',
+    'pricing.lifetime.f1': 'Tudo do Pro Mensal',
+    'pricing.lifetime.f2': 'Licença vitalícia — sem renovações',
+    'pricing.lifetime.f3': 'Todas as atualizações futuras',
+    'pricing.lifetime.f4': 'Suporte prioritário para sempre',
+    'pricing.lifetime.cta': 'Comprar Vitalício',
+    'cta.title': 'Pronto para <span class="highlight">elevar o nível</span> das suas gravações?',
+    'cta.subtitle': 'Junte-se a milhares de criadores, desenvolvedores e educadores usando o RecordSaaS.',
+    'cta.btn': 'Começar Agora',
+  },
+};
+
+function t(key) {
+  return I18N[currentLang]?.[key] || I18N['en'][key] || key;
+}
+
+function applyI18n() {
+  // Text content elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    el.textContent = t(key);
+  });
+
+  // HTML content elements (for titles with <span> tags)
+  document.querySelectorAll('[data-i18n-html]').forEach(el => {
+    const key = el.getAttribute('data-i18n-html');
+    el.innerHTML = t(key);
+  });
+
+  // Update lang attribute on html element
+  document.documentElement.lang = currentLang === 'pt-BR' ? 'pt-BR' : 'en';
+
+  // Update language switch display
+  const langFlag = document.getElementById('lang-flag');
+  const langCode = document.getElementById('lang-code');
+  if (langFlag) langFlag.textContent = currentLang === 'pt-BR' ? '🇧🇷' : '🇺🇸';
+  if (langCode) langCode.textContent = currentLang === 'pt-BR' ? 'PT' : 'EN';
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('recordsaas_lang', lang);
+  applyI18n();
+}
+
+function toggleLang() {
+  setLang(currentLang === 'en' ? 'pt-BR' : 'en');
+}
+
+function detectLang() {
+  // 1. Check saved preference
+  const saved = localStorage.getItem('recordsaas_lang');
+  if (saved && (saved === 'en' || saved === 'pt-BR')) {
+    return saved;
+  }
+
+  // 2. Auto-detect from browser
+  const browserLang = navigator.language || navigator.userLanguage || '';
+  if (browserLang.toLowerCase().startsWith('pt')) {
+    return 'pt-BR';
+  }
+
+  return 'en';
+}
 
 // ======================== REGION TOGGLE ========================
 function setRegion(region) {
@@ -141,9 +291,7 @@ async function checkout(plan) {
   const email = currentUser?.email;
 
   if (!email) {
-    // If not logged in, prompt login first
-    showNotification('Please login with Google first to purchase.', 'info');
-    handleGoogleLogin();
+    showNotification(currentLang === 'pt-BR' ? 'Faça login com o Google primeiro.' : 'Please login with Google first to purchase.', 'info');
     return;
   }
 
@@ -171,7 +319,7 @@ async function checkout(plan) {
     }
   } catch (error) {
     console.error('Checkout error:', error);
-    showNotification('Failed to start checkout. Please try again.', 'error');
+    showNotification(currentLang === 'pt-BR' ? 'Falha ao iniciar o checkout. Tente novamente.' : 'Failed to start checkout. Please try again.', 'error');
   }
 }
 
@@ -237,6 +385,17 @@ function initScrollAnimations() {
 
 // ======================== INIT ========================
 document.addEventListener('DOMContentLoaded', () => {
+  // Detect and apply language
+  currentLang = detectLang();
+
+  // Auto-detect region by language
+  if (currentLang === 'pt-BR') {
+    currentRegion = 'br';
+  }
+
+  applyI18n();
+  updatePricingUI();
+
   // Restore session from localStorage
   const savedToken = localStorage.getItem('recordsaas_session');
   const savedUser = localStorage.getItem('recordsaas_user');
@@ -258,12 +417,6 @@ document.addEventListener('DOMContentLoaded', () => {
       .catch(() => {
         // Silently fail — user stays logged in with cached data
       });
-  }
-
-  // Auto-detect region by browser language
-  const lang = navigator.language || navigator.userLanguage || '';
-  if (lang.toLowerCase().includes('pt')) {
-    setRegion('br');
   }
 
   // Initialize Google Sign-In button (if not already logged in)
