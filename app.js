@@ -317,6 +317,13 @@ async function handleGoogleCredential(response) {
 
     updateAuthUI();
 
+    const pendingPlan = localStorage.getItem('recordsaas_pending_checkout');
+    if (pendingPlan) {
+      localStorage.removeItem('recordsaas_pending_checkout');
+      await checkout(pendingPlan);
+      return;
+    }
+
     // If user has a license, show a notification
     if (data.license.active) {
       showNotification(`Welcome back! Your ${data.license.plan} plan is active.`, 'success');
@@ -359,12 +366,28 @@ function updateAuthUI() {
   }
 }
 
+function startCheckoutLogin(plan) {
+  localStorage.setItem('recordsaas_pending_checkout', plan);
+  initGoogleSignIn();
+
+  if (typeof google !== 'undefined' && google.accounts?.id?.prompt) {
+    google.accounts.id.prompt();
+  }
+
+  showNotification(
+    currentLang === 'pt-BR'
+      ? 'Continue com o Google para ir ao checkout.'
+      : 'Continue with Google to proceed to checkout.',
+    'info'
+  );
+}
+
 // ======================== CHECKOUT ========================
 async function checkout(plan) {
   const email = currentUser?.email;
 
   if (!email) {
-    showNotification(currentLang === 'pt-BR' ? 'Faça login com o Google primeiro.' : 'Please login with Google first to purchase.', 'info');
+    startCheckoutLogin(plan);
     return;
   }
 
@@ -481,6 +504,12 @@ document.addEventListener('DOMContentLoaded', () => {
     sessionToken = savedToken;
     currentUser = JSON.parse(savedUser);
     updateAuthUI();
+
+    const pendingPlan = localStorage.getItem('recordsaas_pending_checkout');
+    if (pendingPlan) {
+      localStorage.removeItem('recordsaas_pending_checkout');
+      checkout(pendingPlan);
+    }
 
     // Verify session is still valid
     fetch(`${API_BASE}/api/auth/status`, {
