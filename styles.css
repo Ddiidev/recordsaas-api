@@ -252,6 +252,15 @@ img {
   gap: 12px;
 }
 
+.google-hidden {
+  position: absolute;
+  width: 0;
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -265,6 +274,24 @@ img {
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+}
+
+.btn-google {
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  border: 1px solid var(--primary);
+  color: var(--text);
+}
+
+.btn-google:hover {
+  border-color: var(--primary-hover);
+  color: var(--primary);
+}
+
+.google-icon {
+  width: 16px;
+  height: 16px;
+  display: inline-block;
 }
 
 .btn-primary {

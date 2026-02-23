@@ -280,9 +280,8 @@ function initGoogleSignIn() {
     auto_select: false,
   });
 
-  // Render Google's official button into the navbar container
   const container = document.getElementById('g-btn-container');
-  if (container) {
+  if (container && !container.dataset.rendered) {
     google.accounts.id.renderButton(container, {
       type: 'standard',
       shape: 'pill',
@@ -291,7 +290,49 @@ function initGoogleSignIn() {
       text: 'signin_with',
       logo_alignment: 'left',
     });
+    container.dataset.rendered = 'true';
   }
+}
+
+function generateLoginToken() {
+  if (window.crypto?.getRandomValues) {
+    const buf = new Uint8Array(16);
+    window.crypto.getRandomValues(buf);
+    return Array.from(buf).map((b) => b.toString(16).padStart(2, '0')).join('');
+  }
+  return Math.random().toString(36).slice(2) + Date.now().toString(36);
+}
+
+function startGoogleRedirectLogin() {
+  if (!GOOGLE_CLIENT_ID) {
+    showNotification(
+      currentLang === 'pt-BR'
+        ? 'Login do Google indisponível no momento.'
+        : 'Google login is unavailable right now.',
+      'error'
+    );
+    return;
+  }
+
+  const host = window.location.hostname || '';
+  const protocol = host.endsWith('netlify.app') ? 'https:' : window.location.protocol;
+  const origin = `${protocol}//${host}${window.location.port ? `:${window.location.port}` : ''}`;
+  const redirectUri = `${origin}/auth/google/`;
+  const state = generateLoginToken();
+  const nonce = generateLoginToken();
+  localStorage.setItem('recordsaas_oauth_state', state);
+
+  const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+  url.searchParams.set('client_id', GOOGLE_CLIENT_ID);
+  url.searchParams.set('redirect_uri', redirectUri);
+  url.searchParams.set('response_type', 'id_token');
+  url.searchParams.set('scope', 'openid email profile');
+  url.searchParams.set('response_mode', 'fragment');
+  url.searchParams.set('prompt', 'select_account');
+  url.searchParams.set('nonce', nonce);
+  url.searchParams.set('state', state);
+
+  window.location.assign(url.toString());
 }
 
 async function handleGoogleCredential(response) {
@@ -359,27 +400,28 @@ function updateAuthUI() {
     `;
   } else {
     if (navAccount) navAccount.style.display = 'none';
-    // Show Google's rendered button
-    authContainer.innerHTML = `<div id="g-btn-container"></div>`;
-    // Re-render the Google button after DOM update
-    setTimeout(() => initGoogleSignIn(), 50);
+    const label = currentLang === 'pt-BR' ? 'Entrar com Google' : 'Sign in with Google';
+    authContainer.innerHTML = `
+      <button class="btn btn-ghost btn-google" onclick="openGoogleLogin()">
+        <svg class="google-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.5 0 6.4 1.2 8.7 3.2l6.5-6.5C35.7 2.8 30.3 0 24 0 14.6 0 6.4 5.4 2.5 13.2l7.6 5.9C12.1 12.9 17.6 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.5 24.5c0-1.7-.2-3.3-.5-4.9H24v9.3h12.7c-.6 3.1-2.3 5.7-4.9 7.5l7.5 5.8c4.4-4.1 6.9-10.1 6.9-17.7z"/>
+          <path fill="#FBBC05" d="M10.1 28.7c-.6-1.8-1-3.8-1-5.8s.4-4 1-5.8l-7.6-5.9C.9 14.7 0 19.2 0 24c0 4.8.9 9.3 2.5 13.8l7.6-5.9z"/>
+          <path fill="#34A853" d="M24 48c6.3 0 11.7-2.1 15.6-5.8l-7.5-5.8c-2.1 1.4-4.7 2.2-8.1 2.2-6.4 0-11.9-3.4-13.9-8.2l-7.6 5.9C6.4 42.6 14.6 48 24 48z"/>
+        </svg>
+        ${label}
+      </button>
+    `;
   }
+}
+
+function openGoogleLogin() {
+  startGoogleRedirectLogin();
 }
 
 function startCheckoutLogin(plan) {
   localStorage.setItem('recordsaas_pending_checkout', plan);
-  initGoogleSignIn();
-
-  if (typeof google !== 'undefined' && google.accounts?.id?.prompt) {
-    google.accounts.id.prompt();
-  }
-
-  showNotification(
-    currentLang === 'pt-BR'
-      ? 'Continue com o Google para ir ao checkout.'
-      : 'Continue with Google to proceed to checkout.',
-    'info'
-  );
+  openGoogleLogin();
 }
 
 // ======================== CHECKOUT ========================
@@ -495,6 +537,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
   applyI18n();
   updatePricingUI();
+  updateAuthUI();
 
   // Restore session from localStorage
   const savedToken = localStorage.getItem('recordsaas_session');
@@ -525,10 +568,16 @@ document.addEventListener('DOMContentLoaded', () => {
       });
   }
 
-  // Initialize Google Sign-In button (if not already logged in)
-  if (!currentUser) {
-    initGoogleSignIn();
-  }
-
   initScrollAnimations();
+
+  const loginError = localStorage.getItem('recordsaas_login_error');
+  if (loginError) {
+    localStorage.removeItem('recordsaas_login_error');
+    showNotification(
+      currentLang === 'pt-BR'
+        ? 'Não foi possível concluir o login do Google.'
+        : 'Unable to complete Google login.',
+      'error'
+    );
+  }
 });

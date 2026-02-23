@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Login</title>
+  </head>
+  <body>
+    <script>
+      const params = new URLSearchParams(window.location.hash.slice(1));
+      const error = params.get('error');
+      const idToken = params.get('id_token');
+      const state = params.get('state');
+      const expectedState = localStorage.getItem('recordsaas_oauth_state');
+      if (expectedState) localStorage.removeItem('recordsaas_oauth_state');
+
+      if (error || !idToken || (expectedState && state !== expectedState)) {
+        localStorage.setItem('recordsaas_login_error', error || 'invalid_state');
+        window.location.replace('/');
+      } else {
+        fetch('/api/auth/google', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ idToken }),
+        })
+          .then((res) => {
+            if (!res.ok) throw new Error('Login failed');
+            return res.json();
+          })
+          .then((data) => {
+            localStorage.setItem('recordsaas_session', data.sessionToken);
+            localStorage.setItem('recordsaas_user', JSON.stringify(data.user));
+            window.location.replace('/');
+          })
+          .catch(() => {
+            localStorage.setItem('recordsaas_login_error', 'login_failed');
+            window.location.replace('/');
+          });
+      }
+    </script>
+  </body>
+</html>
