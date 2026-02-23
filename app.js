@@ -151,7 +151,10 @@ function applyI18n() {
 function setLang(lang) {
   currentLang = lang;
   localStorage.setItem('recordsaas_lang', lang);
+  // Auto-sync region to language
+  currentRegion = lang === 'pt-BR' ? 'br' : 'global';
   applyI18n();
+  updatePricingUI();
   const langSwitch = document.getElementById('lang-switch');
   if (langSwitch) langSwitch.classList.remove('open');
 }
@@ -178,12 +181,12 @@ document.addEventListener('click', (e) => {
 function applyTheme() {
   document.documentElement.setAttribute('data-theme', currentTheme);
   
-  const themeIcon = document.getElementById('theme-icon');
-  if (themeIcon) {
-    if (currentTheme === 'light') themeIcon.textContent = '🔆';
-    else if (currentTheme === 'dark') themeIcon.textContent = '🌙';
-    else themeIcon.textContent = '⚙️';
-  }
+  // Show/hide the correct SVG icon in the theme button
+  const icons = ['light', 'dark', 'system'];
+  icons.forEach(name => {
+    const el = document.getElementById('icon-' + name);
+    if (el) el.style.display = name === currentTheme ? 'block' : 'none';
+  });
 
   document.querySelectorAll('.theme-option').forEach(el => el.classList.remove('active'));
   const activeBtn = document.getElementById('btn-theme-' + currentTheme);
@@ -243,18 +246,20 @@ function updatePricingUI() {
   const pricePro = document.getElementById('price-pro');
   const priceLifetime = document.getElementById('price-lifetime');
 
-  if (currentRegion === 'br') {
-    toggle.classList.add('active');
-    labelGlobal.classList.remove('active');
-    labelBr.classList.add('active');
-  } else {
-    toggle.classList.remove('active');
-    labelGlobal.classList.add('active');
-    labelBr.classList.remove('active');
+  if (toggle) {
+    if (currentRegion === 'br') {
+      toggle.classList.add('active');
+      if (labelGlobal) labelGlobal.classList.remove('active');
+      if (labelBr) labelBr.classList.add('active');
+    } else {
+      toggle.classList.remove('active');
+      if (labelGlobal) labelGlobal.classList.add('active');
+      if (labelBr) labelBr.classList.remove('active');
+    }
   }
 
-  pricePro.textContent = PRICES.pro[currentRegion];
-  priceLifetime.textContent = PRICES.lifetime[currentRegion];
+  if (pricePro) pricePro.textContent = PRICES.pro[currentRegion];
+  if (priceLifetime) priceLifetime.textContent = PRICES.lifetime[currentRegion];
 
   // Update currency symbols
   document.querySelectorAll('.pricing-currency').forEach(el => {

@@ -206,13 +206,14 @@ img {
   box-shadow: var(--card-shadow);
   display: flex;
   flex-direction: column;
-  min-width: 140px;
+  min-width: 175px;
   opacity: 0;
   visibility: hidden;
   transform: translateY(-10px);
   transition: all 0.2s;
   z-index: 200;
   padding: 4px;
+  white-space: nowrap;
 }
 
 .lang-switch.open .lang-dropdown-menu {
@@ -817,7 +818,7 @@ img {
   width: 32px;
   height: 32px;
   border-radius: var(--radius);
-  border: 1px solid var(--primary);
+  border: 2px solid var(--primary);
   object-fit: cover;
 }
 

@@ -28,17 +28,27 @@
       <li><a href="#pricing" data-i18n="nav.pricing">Pricing</a></li>
       <li><a href="/account/" class="nav-account" data-i18n="nav.account">Account</a></li>
       <li style="display: flex; gap: 8px;">
-        <a href="#" class="lang-switch" id="theme-switch" onclick="toggleThemeMenu(event); return false;" title="Switch theme">
-          <span id="theme-icon">⚙️</span>
+        <a href="#" class="lang-switch theme-switch-btn" id="theme-switch" onclick="toggleThemeMenu(event); return false;" title="Switch theme" aria-label="Switch theme">
+          <span id="theme-icon">
+            <!-- sun icon (default) -->
+            <svg id="icon-light" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <!-- moon icon -->
+            <svg id="icon-dark" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <!-- monitor icon (system default) -->
+            <svg id="icon-system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          </span>
           <div class="lang-dropdown-menu" id="theme-menu">
             <div class="lang-option theme-option" id="btn-theme-light" onclick="setTheme('light'); event.stopPropagation();">
-              <span>🔆 Light</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              <span>Light</span>
             </div>
             <div class="lang-option theme-option" id="btn-theme-dark" onclick="setTheme('dark'); event.stopPropagation();">
-              <span>🌙 Dark</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              <span>Dark</span>
             </div>
             <div class="lang-option theme-option" id="btn-theme-system" onclick="setTheme('system'); event.stopPropagation();">
-              <span>⚙️ System</span>
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <span>System</span>
             </div>
           </div>
         </a>
@@ -156,15 +166,7 @@
         </p>
       </div>
 
-      <!-- Region Toggle -->
-      <div class="pricing-toggle">
-        <span class="pricing-toggle-label active" id="label-global" onclick="setRegion('global')">Global (USD)</span>
-        <button class="toggle-switch" id="region-toggle" onclick="toggleRegion()" aria-label="Toggle region pricing"></button>
-        <span class="pricing-toggle-label" id="label-br" onclick="setRegion('br')">
-          Brasil
-          <span class="pricing-badge">-50%</span>
-        </span>
-      </div>
+      <!-- Region auto-set by language (PT-BR → Brazil prices) -->
 
       <div class="pricing-grid">
         <!-- Subscription Card -->
