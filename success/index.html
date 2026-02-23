@@ -91,6 +91,12 @@
     .btn:hover { background: var(--primary-dark); transform: translateY(-2px); box-shadow: 0 6px 20px rgba(46,139,87,0.25); }
     .countdown { font-size: 0.85rem; color: var(--text-muted); margin-top: 1rem; }
   </style>
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('recordsaas_theme') || 'system';
+      if (savedTheme !== 'system') document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
 </head>
 <body>
   <div class="card">

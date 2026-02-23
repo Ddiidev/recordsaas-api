@@ -8,6 +8,12 @@
   <link rel="icon" href="assets/logo.png" type="image/png">
   <link rel="stylesheet" href="styles.css">
   <script src="https://accounts.google.com/gsi/client" async defer></script>
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('recordsaas_theme') || 'system';
+      if (savedTheme !== 'system') document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
 </head>
 <body>
 
@@ -21,6 +27,21 @@
       <li><a href="#features" data-i18n="nav.features">Features</a></li>
       <li><a href="#pricing" data-i18n="nav.pricing">Pricing</a></li>
       <li><a href="/account/" class="nav-account" data-i18n="nav.account">Account</a></li>
+      <li style="display: flex; gap: 8px;">
+        <a href="#" class="lang-switch" id="theme-switch" onclick="toggleThemeMenu(event); return false;" title="Switch theme">
+          <span id="theme-icon">⚙️</span>
+          <div class="lang-dropdown-menu" id="theme-menu">
+            <div class="lang-option theme-option" id="btn-theme-light" onclick="setTheme('light'); event.stopPropagation();">
+              <span>🔆 Light</span>
+            </div>
+            <div class="lang-option theme-option" id="btn-theme-dark" onclick="setTheme('dark'); event.stopPropagation();">
+              <span>🌙 Dark</span>
+            </div>
+            <div class="lang-option theme-option" id="btn-theme-system" onclick="setTheme('system'); event.stopPropagation();">
+              <span>⚙️ System</span>
+            </div>
+          </div>
+        </a>
         <a href="#" class="lang-switch" id="lang-switch" onclick="toggleLangMenu(event); return false;" title="Switch language">
           <span id="lang-flag"><img src="https://flagcdn.com/w20/us.png" alt="EN"></span> <span id="lang-code">EN</span>
           <div class="lang-dropdown-menu" id="lang-menu">
@@ -34,6 +55,7 @@
             </div>
           </div>
         </a>
+      </li>
     </ul>
     <div class="navbar-actions" id="navbar-auth">
       <div id="g-btn-container"></div>

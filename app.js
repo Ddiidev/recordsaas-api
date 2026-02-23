@@ -5,6 +5,7 @@ const GOOGLE_CLIENT_ID = '358891470255-7h1kggp8d1io8947nll6kq51815nbpgp.apps.goo
 // ======================== STATE ========================
 let currentRegion = 'global';
 let currentLang = 'en';
+let currentTheme = 'system';
 let currentUser = null;
 let sessionToken = null;
 
@@ -128,7 +129,7 @@ function applyI18n() {
     el.innerHTML = t(key);
   });
 
-  // Update lang attribute on html element
+  // Update lang attr on html
   document.documentElement.lang = currentLang === 'pt-BR' ? 'pt-BR' : 'en';
 
   // Update language switch display
@@ -161,13 +162,52 @@ function toggleLangMenu(event) {
   if (langSwitch) langSwitch.classList.toggle('open');
 }
 
-// Close lang dropdown when clicking outside
+// Close dropdowns when clicking outside
 document.addEventListener('click', (e) => {
   const langSwitch = document.getElementById('lang-switch');
   if (langSwitch && !langSwitch.contains(e.target)) {
     langSwitch.classList.remove('open');
   }
+  const themeSwitch = document.getElementById('theme-switch');
+  if (themeSwitch && !themeSwitch.contains(e.target)) {
+    themeSwitch.classList.remove('open');
+  }
 });
+
+// ======================== THEMES ========================
+function applyTheme() {
+  document.documentElement.setAttribute('data-theme', currentTheme);
+  
+  const themeIcon = document.getElementById('theme-icon');
+  if (themeIcon) {
+    if (currentTheme === 'light') themeIcon.textContent = '🔆';
+    else if (currentTheme === 'dark') themeIcon.textContent = '🌙';
+    else themeIcon.textContent = '⚙️';
+  }
+
+  document.querySelectorAll('.theme-option').forEach(el => el.classList.remove('active'));
+  const activeBtn = document.getElementById('btn-theme-' + currentTheme);
+  if (activeBtn) activeBtn.classList.add('active');
+}
+
+function setTheme(theme) {
+  currentTheme = theme;
+  localStorage.setItem('recordsaas_theme', theme);
+  applyTheme();
+  const themeSwitch = document.getElementById('theme-switch');
+  if (themeSwitch) themeSwitch.classList.remove('open');
+}
+
+function toggleThemeMenu(event) {
+  if (event) event.preventDefault();
+  const themeSwitch = document.getElementById('theme-switch');
+  if (themeSwitch) themeSwitch.classList.toggle('open');
+}
+
+function detectTheme() {
+  const saved = localStorage.getItem('recordsaas_theme');
+  return saved || 'system';
+}
 
 function detectLang() {
   // 1. Check saved preference
@@ -406,6 +446,10 @@ function initScrollAnimations() {
 
 // ======================== INIT ========================
 document.addEventListener('DOMContentLoaded', () => {
+  // Detect and apply theme
+  currentTheme = detectTheme();
+  applyTheme();
+
   // Detect and apply language
   currentLang = detectLang();
 

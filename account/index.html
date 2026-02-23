@@ -151,6 +151,12 @@
       .btn-group { flex-direction: column; }
     }
   </style>
+  <script>
+    (function() {
+      const savedTheme = localStorage.getItem('recordsaas_theme') || 'system';
+      if (savedTheme !== 'system') document.documentElement.setAttribute('data-theme', savedTheme);
+    })();
+  </script>
 </head>
 <body>
 

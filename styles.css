@@ -22,18 +22,34 @@
   --radius-xl: 8px;
 }
 
+/* Dark mode definitions: applied on explicit data-theme="dark" OR on system preference if not set to light */
+[data-theme="dark"] {
+  --bg: hsl(215, 16%, 16%);
+  --bg-soft: hsl(215, 16%, 18%);
+  --bg-muted: hsl(215, 16%, 22%);
+  --text: hsl(210, 20%, 98%);
+  --text-muted: hsl(215, 16%, 65%);
+  --text-subtle: hsl(215, 16%, 50%);
+  --border: hsl(215, 16%, 32%);
+  --border-light: hsl(215, 16%, 28%);
+  --card-shadow: 0 4px 16px rgba(0,0,0,0.4);
+  --card-shadow-hover: 0 8px 32px rgba(0,0,0,0.5);
+  --primary-light: hsla(154, 60%, 50%, 0.15);
+}
+
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --bg: hsl(215, 16%, 16%);
     --bg-soft: hsl(215, 16%, 18%);
     --bg-muted: hsl(215, 16%, 22%);
     --text: hsl(210, 20%, 98%);
     --text-muted: hsl(215, 16%, 65%);
     --text-subtle: hsl(215, 16%, 50%);
-    --border: hsl(215, 16%, 28%);
-    --border-light: hsl(215, 16%, 24%);
+    --border: hsl(215, 16%, 32%);
+    --border-light: hsl(215, 16%, 28%);
     --card-shadow: 0 4px 16px rgba(0,0,0,0.4);
     --card-shadow-hover: 0 8px 32px rgba(0,0,0,0.5);
+    --primary-light: hsla(154, 60%, 50%, 0.15);
   }
 }
 
@@ -800,8 +816,9 @@ img {
 .user-avatar {
   width: 32px;
   height: 32px;
-  border-radius: 50%;
-  border: 2px solid var(--primary-light);
+  border-radius: var(--radius);
+  border: 1px solid var(--primary);
+  object-fit: cover;
 }
 
 .user-name {
