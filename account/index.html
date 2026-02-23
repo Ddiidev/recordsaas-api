@@ -51,7 +51,7 @@
       text-decoration: none; color: var(--text);
     }
     .navbar-brand img { height: 32px; }
-    .navbar-brand span { color: var(--primary); }
+    .navbar-brand span { color: var(--primary); margin-left: -2px; }
     .navbar-links { display: flex; gap: 12px; list-style: none; }
     .navbar-links a {
       padding: 8px 16px; border-radius: 5px; text-decoration: none;
@@ -208,6 +208,10 @@
           <span class="plan-label">Status</span>
           <span id="plan-status"><span class="badge badge-inactive">No active plan</span></span>
         </div>
+        <div class="plan-row" id="plan-paid-row" style="display: none;">
+          <span class="plan-label">Amount paid</span>
+          <span class="plan-value" id="plan-paid">—</span>
+        </div>
         <div class="plan-row" id="plan-renew-row" style="display: none;">
           <span class="plan-label">Next billing</span>
           <span class="plan-value" id="plan-renew">—</span>
@@ -322,11 +326,22 @@
       const planStatus = document.getElementById('plan-status');
       const planActions = document.getElementById('plan-actions');
       const renewRow = document.getElementById('plan-renew-row');
+      const paidRow = document.getElementById('plan-paid-row');
+      const paidValue = document.getElementById('plan-paid');
 
       if (license && license.active) {
         const name = license.plan === 'lifetime' ? 'Lifetime' : 'Pro Monthly';
         planName.textContent = name;
         planStatus.innerHTML = `<span class="badge badge-active">Active</span>`;
+
+        const paidCurrency = (license.paidCurrency || '').toUpperCase();
+        if (paidRow && paidValue && license.paidAmount !== null && license.paidAmount !== undefined && paidCurrency) {
+          paidRow.style.display = 'flex';
+          paidValue.textContent = new Intl.NumberFormat(undefined, { style: 'currency', currency: paidCurrency }).format(license.paidAmount / 100);
+        } else if (paidRow && paidValue) {
+          paidRow.style.display = 'none';
+          paidValue.textContent = '—';
+        }
 
         if (license.plan === 'pro' || license.plan === 'subscription') {
           renewRow.style.display = 'flex';
@@ -343,6 +358,10 @@
         planName.textContent = 'Free';
         planStatus.innerHTML = `<span class="badge badge-inactive">No active plan</span>`;
         renewRow.style.display = 'none';
+        if (paidRow && paidValue) {
+          paidRow.style.display = 'none';
+          paidValue.textContent = '—';
+        }
         planActions.innerHTML = `<a href="/#pricing" class="btn btn-green">View Plans</a>`;
       }
     }

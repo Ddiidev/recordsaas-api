@@ -29,6 +29,35 @@ function parseSessionToken(token: string): SessionPayload | null {
   }
 }
 
+async function getLatestPaidAmount(
+  stripe: Stripe,
+  customerId: string
+): Promise<{ amount: number | null; currency: string | null }> {
+  try {
+    const invoices = await stripe.invoices.list({ customer: customerId, limit: 5 });
+    for (const invoice of invoices.data) {
+      if (invoice.status === "paid" && typeof invoice.amount_paid === "number") {
+        return { amount: invoice.amount_paid, currency: invoice.currency || null };
+      }
+    }
+  } catch {}
+
+  try {
+    const sessions = await stripe.checkout.sessions.list({
+      customer: customerId,
+      status: "complete",
+      limit: 5,
+    });
+    for (const session of sessions.data) {
+      if (session.payment_status === "paid" && typeof session.amount_total === "number") {
+        return { amount: session.amount_total, currency: session.currency || null };
+      }
+    }
+  } catch {}
+
+  return { amount: null, currency: null };
+}
+
 export default async (req: Request, context: Context) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -84,6 +113,8 @@ export default async (req: Request, context: Context) => {
             region: null,
             activatedAt: null,
             subscriptionStatus: null,
+            paidAmount: null,
+            paidCurrency: null,
           },
         }),
         {
@@ -186,6 +217,8 @@ export default async (req: Request, context: Context) => {
       }
     }
 
+    const payment = await getLatestPaidAmount(stripe, customer.id);
+
     return new Response(
       JSON.stringify({
         user: {
@@ -198,6 +231,8 @@ export default async (req: Request, context: Context) => {
           region,
           activatedAt,
           subscriptionStatus,
+          paidAmount: payment.amount,
+          paidCurrency: payment.currency,
         },
       }),
       {

@@ -26,7 +26,7 @@
     <ul class="navbar-links">
       <li><a href="#features" data-i18n="nav.features">Features</a></li>
       <li><a href="#pricing" data-i18n="nav.pricing">Pricing</a></li>
-      <li><a href="/account/" class="nav-account" data-i18n="nav.account">Account</a></li>
+      <li><a href="/account/" class="nav-account" id="nav-account" data-i18n="nav.account" style="display: none;">Account</a></li>
       <li style="display: flex; gap: 8px;">
         <a href="#" class="lang-switch theme-switch-btn" id="theme-switch" onclick="toggleThemeMenu(event); return false;" title="Switch theme" aria-label="Switch theme">
           <span id="theme-icon">
@@ -139,7 +139,7 @@
         </div>
         <div class="feature-card animate-in delay-5">
           <div class="feature-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
           </div>
           <h3 data-i18n="features.blur.title">Blur & Privacy</h3>
           <p data-i18n="features.blur.desc">Native blur tool to hide sensitive content right in the editor timeline.</p>
@@ -221,7 +221,11 @@
             </li>
             <li>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span data-i18n="pricing.lifetime.f3">All future updates free</span>
+              <span data-i18n="pricing.lifetime.f3">Current version + 5 major updates</span>
+              <div class="tooltip-container">
+                <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                <div class="tooltip-content" data-i18n="pricing.lifetime.tooltip">Includes current version and next 5 major updates. Subsequent versions are optional and will cost just $1.00.</div>
+              </div>
             </li>
             <li>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>

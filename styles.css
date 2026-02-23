@@ -137,6 +137,7 @@ img {
 .navbar-brand span {
   color: var(--primary);
   letter-spacing: -0.04em;
+  margin-left: -2px;
 }
 
 .navbar-links {
@@ -725,6 +726,62 @@ img {
   color: var(--primary);
   flex-shrink: 0;
 }
+
+/* Tooltip styles */
+.tooltip-container {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 6px;
+  cursor: help;
+  position: relative;
+}
+
+.pricing-features li .tooltip-container svg.info-icon {
+  width: 14px;
+  height: 14px;
+  color: var(--text-subtle);
+}
+
+.tooltip-content {
+  visibility: hidden;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-4px);
+  background: var(--text);
+  color: var(--bg);
+  padding: 8px 12px;
+  border-radius: var(--radius);
+  font-size: 0.75rem;
+  width: 220px;
+  text-align: center;
+  z-index: 20;
+  opacity: 0;
+  transition: all 0.2s ease;
+  pointer-events: none;
+  box-shadow: var(--card-shadow);
+  line-height: 1.4;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.tooltip-content::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  margin-left: -5px;
+  border-width: 5px;
+  border-style: solid;
+  border-color: var(--text) transparent transparent transparent;
+}
+
+.tooltip-container:hover .tooltip-content {
+  visibility: visible;
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+
 
 .pricing-card .btn {
   width: 100%;

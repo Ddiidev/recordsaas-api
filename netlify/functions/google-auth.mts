@@ -56,6 +56,35 @@ function generateSessionToken(email: string, googleId: string): string {
   return btoa(JSON.stringify(payload));
 }
 
+async function getLatestPaidAmount(
+  stripe: Stripe,
+  customerId: string
+): Promise<{ amount: number | null; currency: string | null }> {
+  try {
+    const invoices = await stripe.invoices.list({ customer: customerId, limit: 5 });
+    for (const invoice of invoices.data) {
+      if (invoice.status === "paid" && typeof invoice.amount_paid === "number") {
+        return { amount: invoice.amount_paid, currency: invoice.currency || null };
+      }
+    }
+  } catch {}
+
+  try {
+    const sessions = await stripe.checkout.sessions.list({
+      customer: customerId,
+      status: "complete",
+      limit: 5,
+    });
+    for (const session of sessions.data) {
+      if (session.payment_status === "paid" && typeof session.amount_total === "number") {
+        return { amount: session.amount_total, currency: session.currency || null };
+      }
+    }
+  } catch {}
+
+  return { amount: null, currency: null };
+}
+
 export default async (req: Request, context: Context) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -133,6 +162,8 @@ export default async (req: Request, context: Context) => {
       }
     }
 
+    const payment = await getLatestPaidAmount(stripe, customer.id);
+
     // 4. Generate session token
     const sessionToken = generateSessionToken(googleUser.email, googleUser.sub);
 
@@ -149,6 +180,8 @@ export default async (req: Request, context: Context) => {
           region: metadata.recordsaas_region || null,
           activatedAt: metadata.recordsaas_activated_at || null,
           subscriptionStatus,
+          paidAmount: payment.amount,
+          paidCurrency: payment.currency,
         },
         sessionToken,
       }),
