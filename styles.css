@@ -103,10 +103,11 @@ img {
 .navbar {
   position: fixed;
   top: 16px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: calc(100% - 48px);
-  max-width: 1200px;
+  left: 24px;
+  right: 24px;
+  width: auto;
+  max-width: 1152px;
+  margin: 0 auto;
   background: var(--bg-card); /* Changed to bg-card for better contrast if needed, or keep bg with blur */
   background: rgba(var(--bg), 0.8); /* Fallback */
   backdrop-filter: blur(20px);
@@ -265,6 +266,93 @@ img {
   display: flex;
   align-items: center;
   gap: 16px;
+}
+
+.navbar-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 8px;
+  color: var(--text);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.navbar-toggle:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.navbar-mobile {
+  position: fixed;
+  top: 78px;
+  left: 24px;
+  right: 24px;
+  width: auto;
+  max-width: 1152px;
+  margin: 0 auto;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+  z-index: 99;
+  display: none;
+}
+
+.navbar-mobile.open {
+  display: block;
+}
+
+.navbar-mobile-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
+}
+
+.navbar-mobile-link {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px 12px;
+  border-radius: var(--radius);
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--text);
+  background: var(--bg-muted);
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.navbar-mobile-link:hover {
+  background: var(--primary-light);
+  color: var(--primary);
+}
+
+.navbar-mobile .btn-google {
+  width: 100%;
+  justify-content: center;
+}
+
+.navbar-mobile .user-menu {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  width: 100%;
+}
+
+.navbar-mobile .user-menu .btn {
+  width: 100%;
+  justify-content: center;
+}
+
+.navbar-mobile .user-name {
+  font-size: 0.9rem;
+  color: var(--text-muted);
 }
 
 .btn {
@@ -812,11 +900,31 @@ img {
 
 /* ======================== RESPONSIVE ======================== */
 @media (max-width: 768px) {
+  .container {
+    padding: 0 16px;
+  }
+  .navbar {
+    left: 16px;
+    right: 16px;
+    width: auto;
+    padding: 10px 16px;
+  }
+  .navbar-mobile {
+    left: 16px;
+    right: 16px;
+    width: auto;
+  }
   .hero h1 {
     font-size: 2.5rem;
   }
   .navbar-links {
     display: none; /* simple mobile hide for now */
+  }
+  .navbar-actions {
+    display: none;
+  }
+  .navbar-toggle {
+    display: inline-flex;
   }
   .features-grid {
     grid-template-columns: 1fr;

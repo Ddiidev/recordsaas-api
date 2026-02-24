@@ -63,8 +63,8 @@ const I18N = {
     'pricing.lifetime.tooltip': 'Includes current version and next 5 major updates. Subsequent versions are optional and will cost just $1.00.',
     'pricing.lifetime.f4': 'Priority support forever',
     'pricing.lifetime.cta': 'Buy Lifetime',
-    'cta.title': 'Ready to <span class="highlight">increase conversion</span> with product demos?',
-    'cta.subtitle': 'Turn complex SaaS features into engaging videos that shorten sales cycles.',
+    'cta.title': 'Ready to <span class="highlight">increase conversion</span> with incredible product demos?',
+    'cta.subtitle': 'Sometimes customers just don\'t get it! RecordSaaS works alongside you to deliver your product\'s value clearly and engagingly.',
     'cta.btn': 'Start Your Demo',
   },
   'pt-BR': {
@@ -112,8 +112,8 @@ const I18N = {
     'pricing.lifetime.tooltip': 'Inclui a versão atual e as próximas 5 atualizações principais. Versões subsequentes são opcionais por R$ 1,00.',
     'pricing.lifetime.f4': 'Suporte prioritário para sempre',
     'pricing.lifetime.cta': 'Comprar Vitalício',
-    'cta.title': 'Pronto para <span class="highlight">aumentar conversão</span> com demos de produto?',
-    'cta.subtitle': 'Transforme funcionalidades complexas em vídeos que encurtam o ciclo de vendas.',
+    'cta.title': 'Pronto para <span class="highlight">aumentar conversão</span> com demos incríveis do seu produto?',
+    'cta.subtitle': 'As vezes o cliente só não entendeu! O RecordSaaS trabalha junto com você para entregar o valor do seu produto de forma clara e envolvente.',
     'cta.btn': 'Começar a Demo',
   },
 };
@@ -171,6 +171,22 @@ function toggleLangMenu(event) {
   if (langSwitch) langSwitch.classList.toggle('open');
 }
 
+function toggleMobileMenu(event) {
+  if (event) event.preventDefault();
+  const mobileMenu = document.getElementById('navbar-mobile');
+  const mobileToggle = document.getElementById('navbar-toggle');
+  if (!mobileMenu) return;
+  const isOpen = mobileMenu.classList.toggle('open');
+  if (mobileToggle) mobileToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+}
+
+function closeMobileMenu() {
+  const mobileMenu = document.getElementById('navbar-mobile');
+  const mobileToggle = document.getElementById('navbar-toggle');
+  if (mobileMenu) mobileMenu.classList.remove('open');
+  if (mobileToggle) mobileToggle.setAttribute('aria-expanded', 'false');
+}
+
 // Close dropdowns when clicking outside
 document.addEventListener('click', (e) => {
   const langSwitch = document.getElementById('lang-switch');
@@ -180,6 +196,17 @@ document.addEventListener('click', (e) => {
   const themeSwitch = document.getElementById('theme-switch');
   if (themeSwitch && !themeSwitch.contains(e.target)) {
     themeSwitch.classList.remove('open');
+  }
+  const mobileMenu = document.getElementById('navbar-mobile');
+  const mobileToggle = document.getElementById('navbar-toggle');
+  if (
+    mobileMenu &&
+    mobileToggle &&
+    !mobileMenu.contains(e.target) &&
+    !mobileToggle.contains(e.target)
+  ) {
+    mobileMenu.classList.remove('open');
+    mobileToggle.setAttribute('aria-expanded', 'false');
   }
 });
 
@@ -397,24 +424,30 @@ function logout() {
 
 function updateAuthUI() {
   const authContainer = document.getElementById('navbar-auth');
+  const authContainerMobile = document.getElementById('navbar-auth-mobile');
   const navAccount = document.getElementById('nav-account');
+  const navAccountMobile = document.getElementById('nav-account-mobile');
 
   if (currentUser) {
     if (navAccount) navAccount.style.display = 'inline-flex';
-    authContainer.innerHTML = `
+    if (navAccountMobile) navAccountMobile.style.display = 'flex';
+    const markup = `
       <div class="user-menu">
         <a href="/account/" style="display: flex;">
           <img src="${currentUser.picture || ''}" alt="${currentUser.name}" class="user-avatar" referrerpolicy="no-referrer" style="cursor: pointer;">
         </a>
         <span class="user-name">${currentUser.name}</span>
-        <button class="btn btn-ghost" onclick="logout()" style="padding: 6px 12px; font-size: 0.8rem;">Logout</button>
+        <button class="btn btn-ghost" onclick="logout(); closeMobileMenu()" style="padding: 6px 12px; font-size: 0.8rem;">Logout</button>
       </div>
     `;
+    if (authContainer) authContainer.innerHTML = markup;
+    if (authContainerMobile) authContainerMobile.innerHTML = markup;
   } else {
     if (navAccount) navAccount.style.display = 'none';
+    if (navAccountMobile) navAccountMobile.style.display = 'none';
     const label = currentLang === 'pt-BR' ? 'Entrar com Google' : 'Sign in with Google';
-    authContainer.innerHTML = `
-      <button class="btn btn-ghost btn-google" onclick="openGoogleLogin()">
+    const markup = `
+      <button class="btn btn-ghost btn-google" onclick="openGoogleLogin(); closeMobileMenu()">
         <svg class="google-icon" viewBox="0 0 48 48" aria-hidden="true">
           <path fill="#EA4335" d="M24 9.5c3.5 0 6.4 1.2 8.7 3.2l6.5-6.5C35.7 2.8 30.3 0 24 0 14.6 0 6.4 5.4 2.5 13.2l7.6 5.9C12.1 12.9 17.6 9.5 24 9.5z"/>
           <path fill="#4285F4" d="M46.5 24.5c0-1.7-.2-3.3-.5-4.9H24v9.3h12.7c-.6 3.1-2.3 5.7-4.9 7.5l7.5 5.8c4.4-4.1 6.9-10.1 6.9-17.7z"/>
@@ -424,6 +457,8 @@ function updateAuthUI() {
         ${label}
       </button>
     `;
+    if (authContainer) authContainer.innerHTML = markup;
+    if (authContainerMobile) authContainerMobile.innerHTML = markup;
   }
 }
 

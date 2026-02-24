@@ -28,6 +28,13 @@
       <img src="assets/logo.png" alt="RecordSaaS logo">
       Record<span>SaaS</span>
     </a>
+    <button class="navbar-toggle" id="navbar-toggle" aria-label="Abrir menu" aria-expanded="false" onclick="toggleMobileMenu(event)">
+      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="3" y1="6" x2="21" y2="6"></line>
+        <line x1="3" y1="12" x2="21" y2="12"></line>
+        <line x1="3" y1="18" x2="21" y2="18"></line>
+      </svg>
+    </button>
     <ul class="navbar-links">
       <li><a href="#features" data-i18n="nav.features">Features</a></li>
       <li><a href="#pricing" data-i18n="nav.pricing">Pricing</a></li>
@@ -76,6 +83,14 @@
       <div id="g-btn-container"></div>
     </div>
   </nav>
+  <div class="navbar-mobile" id="navbar-mobile">
+    <div class="navbar-mobile-content">
+      <div id="navbar-auth-mobile"></div>
+      <a href="#features" class="navbar-mobile-link" data-i18n="nav.features" onclick="closeMobileMenu()">Features</a>
+      <a href="#pricing" class="navbar-mobile-link" data-i18n="nav.pricing" onclick="closeMobileMenu()">Pricing</a>
+      <a href="/account/" class="navbar-mobile-link nav-account" id="nav-account-mobile" data-i18n="nav.account" style="display: none;" onclick="closeMobileMenu()">Account</a>
+    </div>
+  </div>
 
   <!-- ====== HERO ====== -->
   <section class="hero" id="hero">
