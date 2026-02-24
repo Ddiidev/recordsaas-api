@@ -154,7 +154,12 @@
   <script>
     (function() {
       const savedTheme = localStorage.getItem('recordsaas_theme') || 'system';
-      if (savedTheme !== 'system') document.documentElement.setAttribute('data-theme', savedTheme);
+      if (savedTheme !== 'system') {
+        document.documentElement.setAttribute('data-theme', savedTheme);
+      } else {
+        const prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+        document.documentElement.setAttribute('data-theme', prefersDark ? 'dark' : 'light');
+      }
     })();
   </script>
 </head>

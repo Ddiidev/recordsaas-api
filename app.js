@@ -40,6 +40,8 @@ const I18N = {
     'features.blur.desc': 'Blur sensitive details instantly to demo real environments without exposing customer data.',
     'features.export.title': 'Fast Publishing',
     'features.export.desc': 'Export in MP4 or GIF with hardware acceleration so your sales and marketing teams move faster.',
+    'features.platform.title': 'Cross‑Platform',
+    'features.platform.desc': 'Run it anywhere — Windows, macOS, and Linux with native builds.',
     'pricing.title': 'Simple, transparent pricing',
     'pricing.subtitle': 'Choose the plan that fits your workflow. Cancel anytime if you change your mind.',
     'pricing.pro.name': 'Pro Monthly',
@@ -87,6 +89,8 @@ const I18N = {
     'features.blur.desc': 'Desfoque informações sensíveis na hora e apresente ambientes reais com segurança.',
     'features.export.title': 'Publicação Rápida',
     'features.export.desc': 'Exporte em MP4 ou GIF com aceleração por hardware e acelere o ciclo comercial.',
+    'features.platform.title': 'Multiplataforma',
+    'features.platform.desc': 'Roda em qualquer lugar — Windows, macOS e Linux com builds nativos.',
     'pricing.title': 'Preços simples e transparentes',
     'pricing.subtitle': 'Escolha o plano que se encaixa no seu fluxo. Cancele quando quiser.',
     'pricing.pro.name': 'Pro Mensal',
@@ -180,8 +184,16 @@ document.addEventListener('click', (e) => {
 });
 
 // ======================== THEMES ========================
+function getResolvedTheme() {
+  if (currentTheme !== 'system') return currentTheme;
+  return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
+}
+
 function applyTheme() {
-  document.documentElement.setAttribute('data-theme', currentTheme);
+  const resolvedTheme = getResolvedTheme();
+  document.documentElement.setAttribute('data-theme', resolvedTheme);
   
   // Show/hide the correct SVG icon in the theme button
   const icons = ['light', 'dark', 'system'];
@@ -526,6 +538,16 @@ document.addEventListener('DOMContentLoaded', () => {
   // Detect and apply theme
   currentTheme = detectTheme();
   applyTheme();
+  const systemMedia = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null;
+  if (systemMedia && typeof systemMedia.addEventListener === 'function') {
+    systemMedia.addEventListener('change', () => {
+      if (currentTheme === 'system') applyTheme();
+    });
+  } else if (systemMedia && typeof systemMedia.addListener === 'function') {
+    systemMedia.addListener(() => {
+      if (currentTheme === 'system') applyTheme();
+    });
+  }
 
   // Detect and apply language
   currentLang = detectLang();
