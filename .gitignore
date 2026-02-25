@@ -2,6 +2,14 @@ node_modules
 dist
 .netlify
 .env
+.appdata/
+.netlify-config/
+.netlify-deploy-functions/
+.netlify-fs-patch.cjs
+netlify.deploy.toml
+netlify.toml.bak.deploy
+deploy-*.zip
+netlify/Config/
 
 # IA
 .trae/

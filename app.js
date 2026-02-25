@@ -50,7 +50,7 @@ const I18N = {
     'pricing.pro.note': 'Cancel anytime, no questions asked.',
     'pricing.pro.f1': 'All recording features + Presets',
     'pricing.pro.f2': 'Multi-lane timeline editor',
-    'pricing.pro.f3': 'GPU-accelerated export up to 4K',
+    'pricing.pro.f3': 'GPU-accelerated export up to 2K 60 fps',
     'pricing.pro.f4': 'Priority support',
     'pricing.pro.cta': 'Subscribe',
     'pricing.lifetime.name': 'Lifetime',
@@ -99,7 +99,7 @@ const I18N = {
     'pricing.pro.note': 'Cancele quando quiser, sem perguntas.',
     'pricing.pro.f1': 'Todos os recursos + Presets',
     'pricing.pro.f2': 'Editor com timeline multi-faixa',
-    'pricing.pro.f3': 'Exportação com GPU até 4K',
+    'pricing.pro.f3': 'Exportação com GPU até 2K 60fps',
     'pricing.pro.f4': 'Suporte prioritário',
     'pricing.pro.cta': 'Assinar',
     'pricing.lifetime.name': 'Vitalício',
@@ -422,6 +422,13 @@ function logout() {
   updateAuthUI();
 }
 
+function getAvatarUrl(picture) {
+  if (!picture || typeof picture !== 'string') return '';
+  return picture
+    .replace(/=s\d+-c$/, '=s256-c')
+    .replace(/=s\d+$/, '=s256-c');
+}
+
 function updateAuthUI() {
   const authContainer = document.getElementById('navbar-auth');
   const authContainerMobile = document.getElementById('navbar-auth-mobile');
@@ -431,10 +438,11 @@ function updateAuthUI() {
   if (currentUser) {
     if (navAccount) navAccount.style.display = 'inline-flex';
     if (navAccountMobile) navAccountMobile.style.display = 'flex';
+    const avatarUrl = getAvatarUrl(currentUser.picture);
     const markup = `
       <div class="user-menu">
         <a href="/account/" style="display: flex;">
-          <img src="${currentUser.picture || ''}" alt="${currentUser.name}" class="user-avatar" referrerpolicy="no-referrer" style="cursor: pointer;">
+          <img src="${avatarUrl}" alt="${currentUser.name}" class="user-avatar" referrerpolicy="no-referrer">
         </a>
         <span class="user-name">${currentUser.name}</span>
         <button class="btn btn-ghost" onclick="logout(); closeMobileMenu()" style="padding: 6px 12px; font-size: 0.8rem;">Logout</button>
@@ -493,8 +501,24 @@ async function checkout(plan) {
     });
 
     if (!res.ok) {
-      const error = await res.json();
-      throw new Error(error.error || 'Checkout failed');
+      let errorPayload = null;
+      try {
+        errorPayload = await res.json();
+      } catch {
+        errorPayload = null;
+      }
+
+      if (res.status === 409 && errorPayload?.code === 'ACTIVE_SUBSCRIPTION_EXISTS') {
+        showNotification(
+          currentLang === 'pt-BR'
+            ? 'Você já possui uma assinatura ativa. Gerencie sua assinatura atual antes de contratar outra.'
+            : 'You already have an active subscription. Manage your current subscription before starting another.',
+          'error'
+        );
+        return;
+      }
+
+      throw new Error(errorPayload?.error || 'Checkout failed');
     }
 
     const data = await res.json();

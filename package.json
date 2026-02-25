@@ -5,7 +5,11 @@
   "type": "module",
   "scripts": {
     "dev": "netlify dev",
-    "build": "tsc"
+    "build": "tsc",
+    "deploy:prod": "netlify deploy --prod --site cd0ac2c6-f52b-4c61-b6b0-6055627c389b",
+    "deploy:test": "netlify deploy --prod --site ad52bf01-0145-4384-81e1-522cf14df5a1",
+    "netlify:link:prod": "netlify link --id cd0ac2c6-f52b-4c61-b6b0-6055627c389b --force",
+    "netlify:link:test": "netlify link --id ad52bf01-0145-4384-81e1-522cf14df5a1 --force"
   },
   "dependencies": {
     "netlify": "^23.15.1",

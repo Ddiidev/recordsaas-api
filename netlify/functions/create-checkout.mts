@@ -73,6 +73,27 @@ function isBrazilLocale(locale: string): boolean {
   return normalized === "pt-br" || normalized === "pt_br" || normalized === "br";
 }
 
+async function hasActiveSubscription(stripe: Stripe, customerId: string): Promise<boolean> {
+  const activeSubscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    status: "active",
+    limit: 1,
+  });
+
+  if (activeSubscriptions.data.some((sub) => sub.status === "active")) {
+    return true;
+  }
+
+  // Fallback: query all statuses and filter for active subscriptions.
+  const allSubscriptions = await stripe.subscriptions.list({
+    customer: customerId,
+    status: "all",
+    limit: 20,
+  });
+
+  return allSubscriptions.data.some((sub) => sub.status === "active");
+}
+
 export default async (req: Request, context: Context) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -80,7 +101,7 @@ export default async (req: Request, context: Context) => {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "POST, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
     });
   }
@@ -124,6 +145,25 @@ export default async (req: Request, context: Context) => {
 
     if (existingCustomers.data.length > 0) {
       customerId = existingCustomers.data[0].id;
+
+      if (plan === "pro") {
+        const activeSubscriptionExists = await hasActiveSubscription(stripe, customerId);
+        if (activeSubscriptionExists) {
+          return new Response(
+            JSON.stringify({
+              error: "Active subscription already exists",
+              code: "ACTIVE_SUBSCRIPTION_EXISTS",
+            }),
+            {
+              status: 409,
+              headers: {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+              },
+            }
+          );
+        }
+      }
     } else {
       const newCustomer = await stripe.customers.create({ email });
       customerId = newCustomer.id;

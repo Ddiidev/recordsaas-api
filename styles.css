@@ -356,6 +356,30 @@ img {
   color: var(--text-muted);
 }
 
+.user-menu {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-avatar {
+  width: 38px;
+  height: 38px;
+  border-radius: var(--radius);
+  object-fit: cover;
+  object-position: center;
+  border: 2px solid var(--primary);
+  box-shadow: 0 0 0 2px var(--primary-light);
+  background: var(--bg-muted);
+}
+
+.user-name {
+  font-size: 0.92rem;
+  font-weight: 600;
+  line-height: 1;
+  color: var(--text);
+}
+
 .btn {
   display: inline-flex;
   align-items: center;
@@ -753,6 +777,78 @@ img {
   height: 20px;
   color: var(--primary);
   flex-shrink: 0;
+}
+
+.pricing-card .btn {
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+  isolation: isolate;
+  --trace-border: var(--border);
+  --trace-soft: var(--text-subtle);
+  --trace-core: var(--text-muted);
+  --trace-shadow: rgba(0, 0, 0, 0.14);
+}
+
+.pricing-card:not(.featured) .btn {
+  --trace-border: hsla(154, 64%, 60%, 0.28);
+  --trace-soft: hsla(154, 64%, 60%, 0.1);
+  --trace-core: hsla(154, 64%, 60%, 0.72);
+  --trace-shadow: hsla(154, 64%, 60%, 0.24);
+}
+
+.pricing-card .btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  border: 1px solid var(--trace-border);
+  pointer-events: none;
+}
+
+.pricing-card .btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 54px;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--trace-soft) 18%,
+    var(--trace-core) 50%,
+    var(--trace-soft) 82%,
+    transparent 100%
+  );
+  filter: drop-shadow(0 0 3px var(--trace-shadow));
+  offset-path: inset(1px round var(--radius-lg));
+  offset-anchor: center;
+  offset-rotate: auto;
+  animation: pricing-btn-border-trace 4.8s linear infinite;
+  pointer-events: none;
+}
+
+@supports not (offset-path: inset(1px round 1px)) {
+  .pricing-card .btn::after {
+    display: none;
+  }
+}
+
+@keyframes pricing-btn-border-trace {
+  from {
+    offset-distance: 25%;
+  }
+  to {
+    offset-distance: 125%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pricing-card .btn::after {
+    animation: none;
+  }
 }
 
 .tooltip-container {

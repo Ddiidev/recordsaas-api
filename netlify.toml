@@ -4,3 +4,33 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+
+[[redirects]]
+  from = "/api/create-checkout"
+  to = "/.netlify/functions/create-checkout"
+  status = 200
+
+[[redirects]]
+  from = "/api/verify-license"
+  to = "/.netlify/functions/verify-license"
+  status = 200
+
+[[redirects]]
+  from = "/api/webhook"
+  to = "/.netlify/functions/webhook"
+  status = 200
+
+[[redirects]]
+  from = "/api/cancel-subscription"
+  to = "/.netlify/functions/cancel-subscription"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/google"
+  to = "/.netlify/functions/google-auth"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/status"
+  to = "/.netlify/functions/auth-status"
+  status = 200
