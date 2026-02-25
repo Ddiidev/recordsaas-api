@@ -242,6 +242,10 @@ img {
   background: var(--bg-muted);
 }
 
+.lang-option.active {
+  background: var(--primary-light);
+}
+
 .lang-option img {
   width: 18px;
   height: auto;
@@ -1095,4 +1099,42 @@ img {
 
 [data-theme="dark"] .btn-google.btn-outline-green:hover {
     background-color: hsla(154, 60%, 50%, 0.1);
+}
+
+.notification-static {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  color: #fff;
+  padding: 14px 24px;
+  border-radius: 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+  z-index: 1000;
+  max-width: 360px;
+  animation: fadeInUp 0.3s ease-out;
+}
+
+.notification-success {
+  background: hsl(154, 60%, 42%);
+}
+
+.notification-error {
+  background: hsl(0, 72%, 58%);
+}
+
+.notification-info {
+  background: hsl(215, 60%, 50%);
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }

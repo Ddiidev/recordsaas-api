@@ -95,3 +95,26 @@ Lidas via `Netlify.env.get(...)` nas Functions:
    - `git commit -m "sua mensagem"`
 4. Push:
    - `git push origin main`
+
+## Ultimas atualizacoes
+
+- LP Nuxt (`pages/index.vue`):
+  - handlers inline `onclick` migrados para `@click` (tema, idioma, menu mobile e checkout) para evitar perda de binding apos hidratacao.
+- Composable (`composables/useLandingPage.ts`):
+  - `setLang`, `toggleLangMenu`, `toggleMobileMenu`, `closeMobileMenu`, `setTheme`, `toggleThemeMenu` expostos no retorno para uso direto no template Vue.
+  - nome do perfil no menu autenticado agora e link clicavel para `/account/`.
+- Pagina legada de conta (`public/account/index.html`):
+  - corrigido bloco CSS de tema dark (`[data-theme="dark"]`) que estava com sintaxe invalida.
+  - switches de tema/idioma alterados para `button` com handlers explicitos.
+  - `setTheme`/`setLang` e toggles atualizados para tratar `event` de forma robusta e manter abertura/fechamento dos dropdowns.
+
+- Refatoracao Vue-first da LP (`pages/index.vue` + `composables/useLandingPage.ts`):
+  - removido fluxo legado de `innerHTML`/markup em string para auth/navbar.
+  - removido i18n legado por mutacao de DOM (`data-i18n` + `querySelectorAll`), substituido por bindings Vue com `t(...)`.
+  - menus de idioma/tema/mobile agora controlados por estado reativo (`ref`/`computed`) com `v-if`, `:class` e handlers Vue.
+  - toasts migrados de criacao imperativa de elementos DOM para renderizacao reativa no template.
+
+- Ajustes anti-legado em `/account` (`public/account/index.html`):
+  - removido uso de `innerHTML` para status/plano e acoes do plano.
+  - acoes do plano agora sao elementos declarados no HTML com controle de visibilidade via JS.
+  - toast reutiliza um unico elemento fixo (`#toast`) em vez de criar/remover elementos dinamicamente.

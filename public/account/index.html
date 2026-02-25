@@ -21,18 +21,16 @@
       --red-light: hsl(0, 72%, 96%);
     }
     [data-theme="dark"] {
-      :root {
-        --primary: hsl(154, 60%, 50%);
-        --primary-light: hsla(154, 60%, 50%, 0.15);
-        --primary-dark: hsl(154, 60%, 40%);
-        --text: hsl(210, 20%, 98%);
-        --text-muted: hsl(215, 16%, 65%);
-        --bg: hsl(215, 16%, 16%);
-        --card-bg: hsl(215, 16%, 18%);
-        --border: hsl(215, 16%, 28%);
-        --red: hsl(0, 72%, 65%);
-        --red-light: hsla(0, 72%, 65%, 0.15);
-      }
+      --primary: hsl(154, 60%, 50%);
+      --primary-light: hsla(154, 60%, 50%, 0.15);
+      --primary-dark: hsl(154, 60%, 40%);
+      --text: hsl(210, 20%, 98%);
+      --text-muted: hsl(215, 16%, 65%);
+      --bg: hsl(215, 16%, 16%);
+      --card-bg: hsl(215, 16%, 18%);
+      --border: hsl(215, 16%, 28%);
+      --red: hsl(0, 72%, 65%);
+      --red-light: hsla(0, 72%, 65%, 0.15);
     }
     @media (prefers-color-scheme: dark) {
       :root:not([data-theme="light"]) {
@@ -76,6 +74,8 @@
       position: relative; display: inline-flex; align-items: center; gap: 6px;
       padding: 8px 12px; border-radius: 6px; cursor: pointer; user-select: none;
       border: 1px solid var(--border); color: var(--text-muted); background: var(--card-bg);
+      font: inherit; text-align: left;
+      appearance: none; -webkit-appearance: none;
     }
     .lang-switch:hover { color: var(--primary); border-color: var(--primary); }
     .lang-switch img { width: 16px; height: 12px; object-fit: cover; border-radius: 2px; }
@@ -214,33 +214,33 @@
       <li><a href="/" data-i18n="nav.home">Home</a></li>
       <li><a href="/#pricing" data-i18n="nav.pricing">Pricing</a></li>
       <li>
-        <a href="#" class="lang-switch theme-switch-btn" id="theme-switch" onclick="toggleThemeMenu(event); return false;" title="Switch theme" aria-label="Switch theme">
+        <button type="button" class="lang-switch theme-switch-btn" id="theme-switch" onclick="toggleThemeMenu(event)" title="Switch theme" aria-label="Switch theme">
           <span id="theme-icon">
             <svg id="icon-light" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
             <svg id="icon-dark" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
             <svg id="icon-system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
           </span>
           <div class="lang-dropdown-menu" id="theme-menu">
-            <div class="lang-option theme-option" id="btn-theme-light" onclick="setTheme('light'); event.stopPropagation();"><span>Light</span></div>
-            <div class="lang-option theme-option" id="btn-theme-dark" onclick="setTheme('dark'); event.stopPropagation();"><span>Dark</span></div>
-            <div class="lang-option theme-option" id="btn-theme-system" onclick="setTheme('system'); event.stopPropagation();"><span>System</span></div>
+            <div class="lang-option theme-option" id="btn-theme-light" onclick="setTheme('light', event)"><span>Light</span></div>
+            <div class="lang-option theme-option" id="btn-theme-dark" onclick="setTheme('dark', event)"><span>Dark</span></div>
+            <div class="lang-option theme-option" id="btn-theme-system" onclick="setTheme('system', event)"><span>System</span></div>
           </div>
-        </a>
+        </button>
       </li>
       <li>
-        <a href="#" class="lang-switch" id="lang-switch" onclick="toggleLangMenu(event); return false;" title="Switch language">
+        <button type="button" class="lang-switch" id="lang-switch" onclick="toggleLangMenu(event)" title="Switch language">
           <span id="lang-flag"><img src="https://flagcdn.com/w20/us.png" alt="EN"></span> <span id="lang-code">EN</span>
           <div class="lang-dropdown-menu" id="lang-menu">
-            <div class="lang-option" id="btn-lang-en" onclick="setLang('en'); event.stopPropagation();">
+            <div class="lang-option" id="btn-lang-en" onclick="setLang('en', event)">
               <img src="https://flagcdn.com/w20/us.png" alt="English">
               <span>English (US)</span>
             </div>
-            <div class="lang-option" id="btn-lang-pt" onclick="setLang('pt-BR'); event.stopPropagation();">
+            <div class="lang-option" id="btn-lang-pt" onclick="setLang('pt-BR', event)">
               <img src="https://flagcdn.com/w20/br.png" alt="Portugues">
               <span>Portugues (BR)</span>
             </div>
           </div>
-        </a>
+        </button>
       </li>
     </ul>
   </nav>
@@ -279,7 +279,7 @@
         </div>
         <div class="plan-row">
           <span class="plan-label">Status</span>
-          <span id="plan-status"><span class="badge badge-inactive">No active plan</span></span>
+          <span id="plan-status"><span class="badge badge-inactive" id="plan-status-badge">No active plan</span></span>
         </div>
         <div class="plan-row" id="plan-paid-row" style="display: none;">
           <span class="plan-label">Amount paid</span>
@@ -290,7 +290,10 @@
           <span class="plan-value" id="plan-renew">—</span>
         </div>
         <div class="btn-group" id="plan-actions">
-          <a href="/#pricing" class="btn btn-green">View Plans</a>
+          <a href="/#pricing" class="btn btn-green" id="action-view-plans">View Plans</a>
+          <a href="/#pricing" class="btn btn-green" id="action-upgrade-lifetime" style="display: none;">Upgrade to Lifetime</a>
+          <button class="btn btn-danger" id="action-cancel-sub" style="display: none;" onclick="openCancelModal()">Cancel Subscription</button>
+          <span id="action-lifetime-note" style="display: none; color: var(--text-muted); font-size: 0.9rem;">Lifetime license - no action needed</span>
         </div>
       </div>
 
@@ -312,6 +315,8 @@
       </div>
     </div>
   </div>
+
+  <div class="toast" id="toast" style="display: none;"></div>
 
   <script>
     const API_BASE = window.location.origin;
@@ -372,7 +377,8 @@
       });
     }
 
-    function setTheme(theme) {
+    function setTheme(theme, event) {
+      if (event) event.stopPropagation();
       currentTheme = theme;
       localStorage.setItem('recordsaas_theme', theme);
       applyThemeVisualState();
@@ -392,8 +398,10 @@
     }
 
     function toggleThemeMenu(event) {
-      event.preventDefault();
-      event.stopPropagation();
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
       const switchEl = document.getElementById('theme-switch');
       const langEl = document.getElementById('lang-switch');
       if (langEl) langEl.classList.remove('open');
@@ -403,9 +411,16 @@
     function applyLangVisualState() {
       const lang = currentLang === 'pt-BR' ? 'pt-BR' : 'en';
       document.getElementById('lang-code').textContent = lang === 'pt-BR' ? 'PT' : 'EN';
-      document.getElementById('lang-flag').innerHTML = lang === 'pt-BR'
-        ? '<img src="https://flagcdn.com/w20/br.png" alt="PT">'
-        : '<img src="https://flagcdn.com/w20/us.png" alt="EN">';
+      const flagEl = document.getElementById('lang-flag');
+      if (flagEl) {
+        let flagImg = flagEl.querySelector('img');
+        if (!flagImg) {
+          flagImg = document.createElement('img');
+          flagEl.appendChild(flagImg);
+        }
+        flagImg.src = lang === 'pt-BR' ? 'https://flagcdn.com/w20/br.png' : 'https://flagcdn.com/w20/us.png';
+        flagImg.alt = lang === 'pt-BR' ? 'PT' : 'EN';
+      }
       document.getElementById('btn-lang-en').classList.toggle('active', lang === 'en');
       document.getElementById('btn-lang-pt').classList.toggle('active', lang === 'pt-BR');
       document.querySelectorAll('[data-i18n]').forEach((el) => {
@@ -415,7 +430,8 @@
       document.documentElement.lang = lang;
     }
 
-    function setLang(lang) {
+    function setLang(lang, event) {
+      if (event) event.stopPropagation();
       currentLang = lang === 'pt-BR' ? 'pt-BR' : 'en';
       localStorage.setItem('recordsaas_lang', currentLang);
       applyLangVisualState();
@@ -430,8 +446,10 @@
     }
 
     function toggleLangMenu(event) {
-      event.preventDefault();
-      event.stopPropagation();
+      if (event) {
+        event.preventDefault();
+        event.stopPropagation();
+      }
       const switchEl = document.getElementById('lang-switch');
       const themeEl = document.getElementById('theme-switch');
       if (themeEl) themeEl.classList.remove('open');
@@ -506,16 +524,30 @@
     function applyLicense(license) {
       licenseData = license;
       const planName = document.getElementById('plan-name');
-      const planStatus = document.getElementById('plan-status');
       const planActions = document.getElementById('plan-actions');
+      const statusBadge = document.getElementById('plan-status-badge');
       const renewRow = document.getElementById('plan-renew-row');
       const paidRow = document.getElementById('plan-paid-row');
       const paidValue = document.getElementById('plan-paid');
+      const actionViewPlans = document.getElementById('action-view-plans');
+      const actionUpgradeLifetime = document.getElementById('action-upgrade-lifetime');
+      const actionCancelSub = document.getElementById('action-cancel-sub');
+      const actionLifetimeNote = document.getElementById('action-lifetime-note');
+
+      function setActionVisibility(mode) {
+        if (actionViewPlans) actionViewPlans.style.display = mode === 'free' ? 'inline-block' : 'none';
+        if (actionUpgradeLifetime) actionUpgradeLifetime.style.display = mode === 'pro' ? 'inline-block' : 'none';
+        if (actionCancelSub) actionCancelSub.style.display = mode === 'pro' ? 'inline-block' : 'none';
+        if (actionLifetimeNote) actionLifetimeNote.style.display = mode === 'lifetime' ? 'inline-block' : 'none';
+      }
 
       if (license && license.active) {
         const name = license.plan === 'lifetime' ? 'Lifetime' : 'Pro Monthly';
         planName.textContent = name;
-        planStatus.innerHTML = `<span class="badge badge-active">Active</span>`;
+        if (statusBadge) {
+          statusBadge.textContent = 'Active';
+          statusBadge.className = 'badge badge-active';
+        }
 
         const paidCurrency = (license.paidCurrency || '').toUpperCase();
         if (paidRow && paidValue && license.paidAmount !== null && license.paidAmount !== undefined && paidCurrency) {
@@ -528,24 +560,23 @@
 
         if (license.plan === 'pro' || license.plan === 'subscription') {
           renewRow.style.display = 'flex';
-          planActions.innerHTML = `
-            <a href="/#pricing" class="btn btn-green">Upgrade to Lifetime</a>
-            <button class="btn btn-danger" onclick="openCancelModal()">Cancel Subscription</button>
-          `;
+          setActionVisibility('pro');
         } else {
-          // Lifetime
           renewRow.style.display = 'none';
-          planActions.innerHTML = `<span style="color: var(--text-muted); font-size: 0.9rem;">Lifetime license — no action needed 🎉</span>`;
+          setActionVisibility('lifetime');
         }
       } else {
         planName.textContent = 'Free';
-        planStatus.innerHTML = `<span class="badge badge-inactive">No active plan</span>`;
+        if (statusBadge) {
+          statusBadge.textContent = 'No active plan';
+          statusBadge.className = 'badge badge-inactive';
+        }
         renewRow.style.display = 'none';
         if (paidRow && paidValue) {
           paidRow.style.display = 'none';
           paidValue.textContent = '—';
         }
-        planActions.innerHTML = `<a href="/#pricing" class="btn btn-green">View Plans</a>`;
+        setActionVisibility('free');
       }
     }
 
@@ -594,15 +625,20 @@
     }
 
     function showToast(msg, type) {
-      const existing = document.querySelector('.toast');
-      if (existing) existing.remove();
       const colors = { success: 'hsl(154,60%,50%)', error: 'hsl(0,72%,58%)', info: 'hsl(215,60%,50%)' };
-      const el = document.createElement('div');
-      el.className = 'toast';
+      const el = document.getElementById('toast');
+      if (!el) return;
       el.style.background = colors[type] || colors.info;
+      el.style.display = 'block';
+      el.style.opacity = '1';
       el.textContent = msg;
-      document.body.appendChild(el);
-      setTimeout(() => { el.style.opacity = '0'; el.style.transition = 'opacity 0.3s'; setTimeout(() => el.remove(), 300); }, 4000);
+      setTimeout(() => {
+        el.style.opacity = '0';
+        el.style.transition = 'opacity 0.3s';
+        setTimeout(() => {
+          el.style.display = 'none';
+        }, 300);
+      }, 4000);
     }
   </script>
 </body>

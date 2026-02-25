@@ -1,12 +1,17 @@
 <template>
-
   <!-- ====== NAVBAR ====== -->
   <nav class="navbar" id="navbar">
     <a href="#" class="navbar-brand">
       <img src="/assets/logo.png" alt="RecordSaaS logo">
       Record<span>SaaS</span>
     </a>
-    <button class="navbar-toggle" id="navbar-toggle" aria-label="Abrir menu" aria-expanded="false" onclick="toggleMobileMenu(event)">
+    <button
+      class="navbar-toggle"
+      id="navbar-toggle"
+      aria-label="Abrir menu"
+      :aria-expanded="isMobileMenuOpen ? 'true' : 'false'"
+      @click.prevent="toggleMobileMenu"
+    >
       <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
         <line x1="3" y1="6" x2="21" y2="6"></line>
         <line x1="3" y1="12" x2="21" y2="12"></line>
@@ -14,59 +19,87 @@
       </svg>
     </button>
     <ul class="navbar-links">
-      <li><a href="#features" data-i18n="nav.features">Features</a></li>
-      <li><a href="#pricing" data-i18n="nav.pricing">Pricing</a></li>
-      <li><a href="/account/" class="nav-account" id="nav-account" data-i18n="nav.account" style="display: none;">Account</a></li>
+      <li><a href="#features">{{ t('nav.features') }}</a></li>
+      <li><a href="#pricing">{{ t('nav.pricing') }}</a></li>
+      <li v-if="isAuthenticated"><a href="/account/" class="nav-account" id="nav-account">{{ t('nav.account') }}</a></li>
       <li style="display: flex; gap: 8px;">
-        <a href="#" class="lang-switch theme-switch-btn" id="theme-switch" onclick="toggleThemeMenu(event); return false;" title="Switch theme" aria-label="Switch theme">
+        <div class="lang-switch theme-switch-btn" id="theme-switch" title="Switch theme" aria-label="Switch theme" @click.stop="toggleThemeMenu">
           <span id="theme-icon">
-            <!-- sun icon (default) -->
-            <svg id="icon-light" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
-            <!-- moon icon -->
-            <svg id="icon-dark" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
-            <!-- monitor icon (system default) -->
-            <svg id="icon-system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            <svg v-show="currentTheme === 'light'" id="icon-light" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+            <svg v-show="currentTheme === 'dark'" id="icon-dark" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+            <svg v-show="currentTheme === 'system'" id="icon-system" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
           </span>
-          <div class="lang-dropdown-menu" id="theme-menu">
-            <div class="lang-option theme-option" id="btn-theme-light" onclick="setTheme('light'); event.stopPropagation();">
+          <div class="lang-dropdown-menu" id="theme-menu" :class="{ active: isThemeMenuOpen }">
+            <div class="lang-option theme-option" :class="{ active: currentTheme === 'light' }" id="btn-theme-light" @click.stop="setTheme('light')">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
               <span>Light</span>
             </div>
-            <div class="lang-option theme-option" id="btn-theme-dark" onclick="setTheme('dark'); event.stopPropagation();">
+            <div class="lang-option theme-option" :class="{ active: currentTheme === 'dark' }" id="btn-theme-dark" @click.stop="setTheme('dark')">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
               <span>Dark</span>
             </div>
-            <div class="lang-option theme-option" id="btn-theme-system" onclick="setTheme('system'); event.stopPropagation();">
+            <div class="lang-option theme-option" :class="{ active: currentTheme === 'system' }" id="btn-theme-system" @click.stop="setTheme('system')">
               <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
               <span>System</span>
             </div>
           </div>
-        </a>
-        <a href="#" class="lang-switch" id="lang-switch" onclick="toggleLangMenu(event); return false;" title="Switch language">
-          <span id="lang-flag"><img src="https://flagcdn.com/w20/us.png" alt="EN"></span> <span id="lang-code">EN</span>
-          <div class="lang-dropdown-menu" id="lang-menu">
-            <div class="lang-option" id="btn-lang-en" onclick="setLang('en'); event.stopPropagation();">
+        </div>
+        <div class="lang-switch" id="lang-switch" title="Switch language" @click.stop="toggleLangMenu">
+          <span id="lang-flag"><img :src="langFlagSrc" :alt="langCode"></span> <span id="lang-code">{{ langCode }}</span>
+          <div class="lang-dropdown-menu" id="lang-menu" :class="{ active: isLangMenuOpen }">
+            <div class="lang-option" :class="{ active: currentLang === 'en' }" id="btn-lang-en" @click.stop="setLang('en')">
               <img src="https://flagcdn.com/w20/us.png" alt="English">
               <span>English (US)</span>
             </div>
-            <div class="lang-option" id="btn-lang-pt" onclick="setLang('pt-BR'); event.stopPropagation();">
+            <div class="lang-option" :class="{ active: currentLang === 'pt-BR' }" id="btn-lang-pt" @click.stop="setLang('pt-BR')">
               <img src="https://flagcdn.com/w20/br.png" alt="Português">
               <span>Português (BR)</span>
             </div>
           </div>
-        </a>
+        </div>
       </li>
     </ul>
     <div class="navbar-actions" id="navbar-auth">
-      <div id="g-btn-container"></div>
+      <div v-if="isAuthenticated" class="user-menu">
+        <a href="/account/" style="display: flex;">
+          <img :src="userAvatarUrl" :alt="userName || 'User'" class="user-avatar" referrerpolicy="no-referrer">
+        </a>
+        <a href="/account/" class="user-name">{{ userName }}</a>
+        <button class="btn btn-ghost" style="padding: 6px 12px; font-size: 0.8rem;" @click="logout">{{ logoutLabel }}</button>
+      </div>
+      <button v-else class="btn btn-ghost btn-google" @click="openGoogleLogin">
+        <svg class="google-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.5 0 6.4 1.2 8.7 3.2l6.5-6.5C35.7 2.8 30.3 0 24 0 14.6 0 6.4 5.4 2.5 13.2l7.6 5.9C12.1 12.9 17.6 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.5 24.5c0-1.7-.2-3.3-.5-4.9H24v9.3h12.7c-.6 3.1-2.3 5.7-4.9 7.5l7.5 5.8c4.4-4.1 6.9-10.1 6.9-17.7z"/>
+          <path fill="#FBBC05" d="M10.1 28.7c-.6-1.8-1-3.8-1-5.8s.4-4 1-5.8l-7.6-5.9C.9 14.7 0 19.2 0 24c0 4.8.9 9.3 2.5 13.8l7.6-5.9z"/>
+          <path fill="#34A853" d="M24 48c6.3 0 11.7-2.1 15.6-5.8l-7.5-5.8c-2.1 1.4-4.7 2.2-8.1 2.2-6.4 0-11.9-3.4-13.9-8.2l-7.6 5.9C6.4 42.6 14.6 48 24 48z"/>
+        </svg>
+        {{ loginLabel }}
+      </button>
     </div>
   </nav>
-  <div class="navbar-mobile" id="navbar-mobile">
+
+  <div class="navbar-mobile" id="navbar-mobile" :class="{ open: isMobileMenuOpen }">
     <div class="navbar-mobile-content">
-      <div id="navbar-auth-mobile"></div>
-      <a href="#features" class="navbar-mobile-link" data-i18n="nav.features" onclick="closeMobileMenu()">Features</a>
-      <a href="#pricing" class="navbar-mobile-link" data-i18n="nav.pricing" onclick="closeMobileMenu()">Pricing</a>
-      <a href="/account/" class="navbar-mobile-link nav-account" id="nav-account-mobile" data-i18n="nav.account" style="display: none;" onclick="closeMobileMenu()">Account</a>
+      <div v-if="isAuthenticated" class="user-menu">
+        <a href="/account/" style="display: flex;">
+          <img :src="userAvatarUrl" :alt="userName || 'User'" class="user-avatar" referrerpolicy="no-referrer">
+        </a>
+        <a href="/account/" class="user-name">{{ userName }}</a>
+        <button class="btn btn-ghost" style="padding: 6px 12px; font-size: 0.8rem;" @click="logoutAndCloseMobile">{{ logoutLabel }}</button>
+      </div>
+      <button v-else class="btn btn-ghost btn-google" @click="openGoogleLoginAndCloseMobile">
+        <svg class="google-icon" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#EA4335" d="M24 9.5c3.5 0 6.4 1.2 8.7 3.2l6.5-6.5C35.7 2.8 30.3 0 24 0 14.6 0 6.4 5.4 2.5 13.2l7.6 5.9C12.1 12.9 17.6 9.5 24 9.5z"/>
+          <path fill="#4285F4" d="M46.5 24.5c0-1.7-.2-3.3-.5-4.9H24v9.3h12.7c-.6 3.1-2.3 5.7-4.9 7.5l7.5 5.8c4.4-4.1 6.9-10.1 6.9-17.7z"/>
+          <path fill="#FBBC05" d="M10.1 28.7c-.6-1.8-1-3.8-1-5.8s.4-4 1-5.8l-7.6-5.9C.9 14.7 0 19.2 0 24c0 4.8.9 9.3 2.5 13.8l7.6-5.9z"/>
+          <path fill="#34A853" d="M24 48c6.3 0 11.7-2.1 15.6-5.8l-7.5-5.8c-2.1 1.4-4.7 2.2-8.1 2.2-6.4 0-11.9-3.4-13.9-8.2l-7.6 5.9C6.4 42.6 14.6 48 24 48z"/>
+        </svg>
+        {{ loginLabel }}
+      </button>
+      <a href="#features" class="navbar-mobile-link" @click="closeMobileMenu">{{ t('nav.features') }}</a>
+      <a href="#pricing" class="navbar-mobile-link" @click="closeMobileMenu">{{ t('nav.pricing') }}</a>
+      <a v-if="isAuthenticated" href="/account/" class="navbar-mobile-link nav-account" id="nav-account-mobile" @click="closeMobileMenu">{{ t('nav.account') }}</a>
     </div>
   </div>
 
@@ -75,15 +108,10 @@
     <div class="container">
       <div class="hero-badge animate-in">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-        <span data-i18n="hero.badge">Professional Screen Recording</span>
+        <span>{{ t('hero.badge') }}</span>
       </div>
-      <h1 class="animate-in delay-1" data-i18n-html="hero.title">
-        Record. Edit.<br><span class="highlight">Export like a Pro.</span>
-      </h1>
-      <p class="hero-subtitle animate-in delay-2" data-i18n="hero.subtitle">
-        Professional screen recording with multi-lane timeline, webcam overlay,
-        cinematic mouse tracking, blur tools, and GPU‑accelerated export up to 2K.
-      </p>
+      <h1 class="animate-in delay-1" v-html="t('hero.title')"></h1>
+      <p class="hero-subtitle animate-in delay-2">{{ t('hero.subtitle') }}</p>
       <div class="hero-downloads animate-in delay-3">
         <a href="#" class="btn btn-download">
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M0 3.449L9.75 2.1v9.451H0V3.449zm10.949-1.606L24 0v11.4h-13.051V1.843zM0 12.6h9.75v9.451L0 20.699V12.6zm10.949 0H24V24l-13.051-1.843V12.6z"/></svg>
@@ -108,54 +136,52 @@
   <section class="features" id="features">
     <div class="container">
       <div class="features-header">
-        <div class="section-label" data-i18n="nav.features">Features</div>
-        <h2 class="section-title" data-i18n="features.title">Everything you need to create stunning recordings</h2>
-        <p class="section-subtitle" data-i18n="features.subtitle">
-          From capture to export, RecordSaaS covers every step of your workflow.
-        </p>
+        <div class="section-label">{{ t('nav.features') }}</div>
+        <h2 class="section-title">{{ t('features.title') }}</h2>
+        <p class="section-subtitle">{{ t('features.subtitle') }}</p>
       </div>
       <div class="features-grid">
         <div class="feature-card animate-in delay-1">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
           </div>
-          <h3 data-i18n="features.capture.title">Flexible Capture</h3>
-          <p data-i18n="features.capture.desc">Record full screen, a specific window, or custom area with multi-monitor support.</p>
+          <h3>{{ t('features.capture.title') }}</h3>
+          <p>{{ t('features.capture.desc') }}</p>
         </div>
         <div class="feature-card animate-in delay-2">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
           </div>
-          <h3 data-i18n="features.webcam.title">Webcam Overlay</h3>
-          <p data-i18n="features.webcam.desc">Add a personal touch with your camera feed overlaid on the recording.</p>
+          <h3>{{ t('features.webcam.title') }}</h3>
+          <p>{{ t('features.webcam.desc') }}</p>
         </div>
         <div class="feature-card animate-in delay-3">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
           </div>
-          <h3 data-i18n="features.tracking.title">Cinematic Tracking</h3>
-          <p data-i18n="features.tracking.desc">Smart zoom & pan that follows your mouse, keeping the action in focus.</p>
+          <h3>{{ t('features.tracking.title') }}</h3>
+          <p>{{ t('features.tracking.desc') }}</p>
         </div>
         <div class="feature-card animate-in delay-4">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2.18" ry="2.18"/><line x1="7" y1="2" x2="7" y2="22"/><line x1="17" y1="2" x2="17" y2="22"/><line x1="2" y1="12" x2="22" y2="12"/><line x1="2" y1="7" x2="7" y2="7"/><line x1="2" y1="17" x2="7" y2="17"/><line x1="17" y1="17" x2="22" y2="17"/><line x1="17" y1="7" x2="22" y2="7"/></svg>
           </div>
-          <h3 data-i18n="features.timeline.title">Multi-Lane Timeline</h3>
-          <p data-i18n="features.timeline.desc">Professional editor with multiple lanes for advanced video compositions.</p>
+          <h3>{{ t('features.timeline.title') }}</h3>
+          <p>{{ t('features.timeline.desc') }}</p>
         </div>
         <div class="feature-card animate-in delay-5">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
           </div>
-          <h3 data-i18n="features.blur.title">Blur & Privacy</h3>
-          <p data-i18n="features.blur.desc">Native blur tool to hide sensitive content right in the editor timeline.</p>
+          <h3>{{ t('features.blur.title') }}</h3>
+          <p>{{ t('features.blur.desc') }}</p>
         </div>
         <div class="feature-card animate-in delay-6">
           <div class="feature-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
           </div>
-          <h3 data-i18n="features.export.title">GPU-Accelerated Export</h3>
-          <p data-i18n="features.export.desc">Lightning-fast export to MP4 or GIF, up to 2K resolution with hardware acceleration.</p>
+          <h3>{{ t('features.export.title') }}</h3>
+          <p>{{ t('features.export.desc') }}</p>
         </div>
       </div>
     </div>
@@ -165,80 +191,74 @@
   <section class="pricing" id="pricing">
     <div class="container">
       <div class="pricing-header">
-        <div class="section-label" data-i18n="nav.pricing">Pricing</div>
-        <h2 class="section-title" data-i18n="pricing.title">Simple, transparent pricing</h2>
-        <p class="section-subtitle" data-i18n="pricing.subtitle">
-          Choose the plan that fits your workflow. Cancel anytime if you change your mind.
-        </p>
+        <div class="section-label">{{ t('nav.pricing') }}</div>
+        <h2 class="section-title">{{ t('pricing.title') }}</h2>
+        <p class="section-subtitle">{{ t('pricing.subtitle') }}</p>
       </div>
 
-      <!-- Region auto-set by language (PT-BR → Brazil prices) -->
-
       <div class="pricing-grid">
-        <!-- Subscription Card -->
         <div class="pricing-card">
-          <div class="pricing-name" data-i18n="pricing.pro.name">Pro Monthly</div>
-          <div class="pricing-desc" data-i18n="pricing.pro.desc">Full access to all Pro features, billed monthly.</div>
+          <div class="pricing-name">{{ t('pricing.pro.name') }}</div>
+          <div class="pricing-desc">{{ t('pricing.pro.desc') }}</div>
           <div class="pricing-price">
-            <span class="pricing-currency">$</span>
-            <span class="pricing-amount" id="price-pro">10</span>
+            <span class="pricing-currency">{{ currencySymbol }}</span>
+            <span class="pricing-amount">{{ proPrice }}</span>
           </div>
-          <div class="pricing-period" id="period-pro" data-i18n="pricing.pro.period">/month</div>
-          <div class="pricing-note" data-i18n="pricing.pro.note">Cancel anytime, no questions asked.</div>
+          <div class="pricing-period">{{ t('pricing.pro.period') }}</div>
+          <div class="pricing-note">{{ t('pricing.pro.note') }}</div>
           <ul class="pricing-features">
             <li>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span data-i18n="pricing.pro.f1">All recording features</span>
+              <span>{{ t('pricing.pro.f1') }}</span>
             </li>
             <li>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span data-i18n="pricing.pro.f2">Multi-lane timeline editor</span>
+              <span>{{ t('pricing.pro.f2') }}</span>
             </li>
             <li>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span data-i18n="pricing.pro.f3">GPU-accelerated export up to 2K</span>
+              <span>{{ t('pricing.pro.f3') }}</span>
             </li>
             <li>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span data-i18n="pricing.pro.f4">Priority support</span>
+              <span>{{ t('pricing.pro.f4') }}</span>
             </li>
           </ul>
-          <button class="btn btn-ghost btn-lg" onclick="checkout('pro')" data-i18n="pricing.pro.cta">Subscribe</button>
+          <button class="btn btn-ghost btn-lg" @click="checkout('pro')">{{ t('pricing.pro.cta') }}</button>
         </div>
 
-        <!-- Lifetime Card -->
         <div class="pricing-card featured">
-          <div class="pricing-name" data-i18n="pricing.lifetime.name">Lifetime</div>
-          <div class="pricing-desc" data-i18n="pricing.lifetime.desc">One-time payment, all Pro features forever.</div>
+          <div class="pricing-name">{{ t('pricing.lifetime.name') }}</div>
+          <div class="pricing-desc">{{ t('pricing.lifetime.desc') }}</div>
           <div class="pricing-price">
-            <span class="pricing-currency">$</span>
-            <span class="pricing-amount" id="price-lifetime">87</span>
+            <span class="pricing-currency">{{ currencySymbol }}</span>
+            <span class="pricing-amount">{{ lifetimePrice }}</span>
           </div>
-          <div class="pricing-period" id="period-lifetime" data-i18n="pricing.lifetime.period">one-time payment</div>
-          <div class="pricing-note" data-i18n="pricing.lifetime.note">Pay once, use forever. Free updates included.</div>
+          <div class="pricing-period">{{ t('pricing.lifetime.period') }}</div>
+          <div class="pricing-note">{{ t('pricing.lifetime.note') }}</div>
           <ul class="pricing-features">
             <li>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span data-i18n="pricing.lifetime.f1">Everything in Pro Monthly</span>
+              <span>{{ t('pricing.lifetime.f1') }}</span>
             </li>
             <li>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span data-i18n="pricing.lifetime.f2">Lifetime license — no renewals</span>
+              <span>{{ t('pricing.lifetime.f2') }}</span>
             </li>
             <li>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span data-i18n="pricing.lifetime.f3">Current version + 5 major updates</span>
+              <span>{{ t('pricing.lifetime.f3') }}</span>
               <div class="tooltip-container">
                 <svg class="info-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
-                <div class="tooltip-content" data-i18n="pricing.lifetime.tooltip">Includes current version and next 5 major updates. Subsequent versions are optional and will cost just $1.00.</div>
+                <div class="tooltip-content">{{ t('pricing.lifetime.tooltip') }}</div>
               </div>
             </li>
             <li>
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-              <span data-i18n="pricing.lifetime.f4">Priority support forever</span>
+              <span>{{ t('pricing.lifetime.f4') }}</span>
             </li>
           </ul>
-          <button class="btn btn-primary btn-lg" onclick="checkout('lifetime')" data-i18n="pricing.lifetime.cta">Buy Lifetime</button>
+          <button class="btn btn-primary btn-lg" @click="checkout('lifetime')">{{ t('pricing.lifetime.cta') }}</button>
         </div>
       </div>
     </div>
@@ -248,11 +268,11 @@
   <section class="cta-section">
     <div class="container">
       <div class="cta-box">
-        <h2 data-i18n-html="cta.title">Ready to <span class="highlight">level up</span> your recordings?</h2>
-        <p data-i18n="cta.subtitle">Join thousands of creators, developers, and educators using RecordSaaS.</p>
+        <h2 v-html="t('cta.title')"></h2>
+        <p>{{ t('cta.subtitle') }}</p>
         <a href="#pricing" class="btn btn-record btn-lg">
           <span class="rec-dot"></span>
-          <span data-i18n="cta.btn">Get Started Now</span>
+          <span>{{ t('cta.btn') }}</span>
         </a>
       </div>
     </div>
@@ -267,8 +287,8 @@
           Record<span>SaaS</span>
         </div>
         <ul class="footer-links">
-          <li><a href="#features" data-i18n="nav.features">Features</a></li>
-          <li><a href="#pricing" data-i18n="nav.pricing">Pricing</a></li>
+          <li><a href="#features">{{ t('nav.features') }}</a></li>
+          <li><a href="#pricing">{{ t('nav.pricing') }}</a></li>
           <li><a href="https://github.com/Ddiidev/recordsaas" target="_blank" rel="noopener">GitHub</a></li>
         </ul>
         <div class="footer-copy">&copy; 2026 RecordSaaS. All rights reserved.</div>
@@ -276,6 +296,9 @@
     </div>
   </footer>
 
+  <div v-if="notification" class="notification notification-static" :class="`notification-${notification.type}`">
+    {{ notification.message }}
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -288,5 +311,34 @@ useSeoMeta({
   twitterCard: 'summary_large_image',
 })
 
-useLandingPage()
+const {
+  t,
+  currentLang,
+  currentTheme,
+  isAuthenticated,
+  isLangMenuOpen,
+  isThemeMenuOpen,
+  isMobileMenuOpen,
+  langCode,
+  langFlagSrc,
+  loginLabel,
+  logoutLabel,
+  userAvatarUrl,
+  userName,
+  proPrice,
+  lifetimePrice,
+  currencySymbol,
+  notification,
+  setLang,
+  toggleLangMenu,
+  toggleMobileMenu,
+  closeMobileMenu,
+  setTheme,
+  toggleThemeMenu,
+  checkout,
+  logout,
+  openGoogleLogin,
+  openGoogleLoginAndCloseMobile,
+  logoutAndCloseMobile,
+} = useLandingPage()
 </script>

@@ -1,4 +1,4 @@
-import { onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { LANDING_I18N } from '../constants/landing-i18n'
 import type { CheckoutPlan, Language, Region, Theme, UserSession } from '../types/landing'
 
@@ -11,18 +11,11 @@ const PRICES: Record<CheckoutPlan, Record<Region, number>> = {
 
 const CURRENCY: Record<Region, string> = { global: '$', br: 'R$' }
 
-declare global {
-  interface Window {
-    setLang?: (lang: Language) => void
-    toggleLangMenu?: (event?: Event) => void
-    toggleMobileMenu?: (event?: Event) => void
-    closeMobileMenu?: () => void
-    setTheme?: (theme: Theme) => void
-    toggleThemeMenu?: (event?: Event) => void
-    checkout?: (plan: CheckoutPlan) => Promise<void>
-    logout?: () => void
-    openGoogleLogin?: () => void
-  }
+type NotificationType = 'success' | 'error' | 'info'
+
+interface NotificationState {
+  message: string
+  type: NotificationType
 }
 
 export function useLandingPage() {
@@ -32,8 +25,16 @@ export function useLandingPage() {
   const currentUser = ref<UserSession | null>(null)
   const sessionToken = ref<string | null>(null)
 
+  const isLangMenuOpen = ref(false)
+  const isThemeMenuOpen = ref(false)
+  const isMobileMenuOpen = ref(false)
+  const notification = ref<NotificationState | null>(null)
+  const prefersDark = ref(false)
+
   let systemMedia: MediaQueryList | null = null
-  let systemThemeListener: (() => void) | null = null
+  let systemThemeListener: ((event: MediaQueryListEvent) => void) | null = null
+  let notificationTimer: ReturnType<typeof setTimeout> | null = null
+  let scrollObserver: IntersectionObserver | null = null
 
   function getApiBase(): string {
     return window.location.origin
@@ -43,130 +44,90 @@ export function useLandingPage() {
     return LANDING_I18N[currentLang.value]?.[key] || LANDING_I18N.en[key] || key
   }
 
-  function setDropdownState(switchId: string, menuId: string, open: boolean): void {
-    const switchEl = document.getElementById(switchId)
-    const menuEl = document.getElementById(menuId)
-    if (switchEl) switchEl.classList.toggle('open', open)
-    if (menuEl) menuEl.classList.toggle('active', open)
+  const isAuthenticated = computed(() => Boolean(currentUser.value))
+  const langCode = computed(() => (currentLang.value === 'pt-BR' ? 'PT' : 'EN'))
+  const langFlagSrc = computed(() => (currentLang.value === 'pt-BR' ? 'https://flagcdn.com/w20/br.png' : 'https://flagcdn.com/w20/us.png'))
+  const loginLabel = computed(() => (currentLang.value === 'pt-BR' ? 'Entrar com Google' : 'Sign in with Google'))
+  const logoutLabel = computed(() => (currentLang.value === 'pt-BR' ? 'Sair' : 'Logout'))
+  const proPrice = computed(() => PRICES.pro[currentRegion.value])
+  const lifetimePrice = computed(() => PRICES.lifetime[currentRegion.value])
+  const currencySymbol = computed(() => CURRENCY[currentRegion.value])
+  const userName = computed(() => currentUser.value?.name || '')
+  const userAvatarUrl = computed(() => getAvatarUrl(currentUser.value?.picture))
+
+  const resolvedTheme = computed<'light' | 'dark'>(() => {
+    if (currentTheme.value !== 'system') return currentTheme.value
+    return prefersDark.value ? 'dark' : 'light'
+  })
+
+  function applyDocumentLang(): void {
+    document.documentElement.lang = currentLang.value === 'pt-BR' ? 'pt-BR' : 'en'
   }
 
-  function applyI18n(): void {
-    document.querySelectorAll<HTMLElement>('[data-i18n]').forEach((el) => {
-      const key = el.getAttribute('data-i18n')
-      if (!key) return
-      el.textContent = t(key)
-    })
-
-    document.querySelectorAll<HTMLElement>('[data-i18n-html]').forEach((el) => {
-      const key = el.getAttribute('data-i18n-html')
-      if (!key) return
-      el.innerHTML = t(key)
-    })
-
-    document.documentElement.lang = currentLang.value === 'pt-BR' ? 'pt-BR' : 'en'
-
-    const langFlag = document.getElementById('lang-flag')
-    const langCode = document.getElementById('lang-code')
-    if (langFlag) {
-      langFlag.innerHTML = currentLang.value === 'pt-BR'
-        ? '<img src="https://flagcdn.com/w20/br.png" alt="BR">'
-        : '<img src="https://flagcdn.com/w20/us.png" alt="EN">'
-    }
-    if (langCode) langCode.textContent = currentLang.value === 'pt-BR' ? 'PT' : 'EN'
-
-    document.querySelectorAll('.lang-option').forEach((el) => el.classList.remove('active'))
-    const activeBtn = document.getElementById(currentLang.value === 'pt-BR' ? 'btn-lang-pt' : 'btn-lang-en')
-    if (activeBtn) activeBtn.classList.add('active')
+  function applyTheme(): void {
+    document.documentElement.setAttribute('data-theme', resolvedTheme.value)
   }
 
   function setLang(lang: Language): void {
     currentLang.value = lang
     localStorage.setItem('recordsaas_lang', lang)
     currentRegion.value = lang === 'pt-BR' ? 'br' : 'global'
-    applyI18n()
-    updatePricingUI()
-    updateAuthUI()
-    setDropdownState('lang-switch', 'lang-menu', false)
+    isLangMenuOpen.value = false
+    applyDocumentLang()
   }
 
   function toggleLangMenu(event?: Event): void {
-    if (event) event.preventDefault()
-    const switchEl = document.getElementById('lang-switch')
-    const isOpen = !!switchEl?.classList.contains('open')
-    setDropdownState('theme-switch', 'theme-menu', false)
-    setDropdownState('lang-switch', 'lang-menu', !isOpen)
+    if (event) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    isThemeMenuOpen.value = false
+    isLangMenuOpen.value = !isLangMenuOpen.value
   }
 
   function toggleMobileMenu(event?: Event): void {
-    if (event) event.preventDefault()
-    const mobileMenu = document.getElementById('navbar-mobile')
-    const mobileToggle = document.getElementById('navbar-toggle')
-    if (!mobileMenu) return
-    const isOpen = mobileMenu.classList.toggle('open')
-    if (mobileToggle) mobileToggle.setAttribute('aria-expanded', isOpen ? 'true' : 'false')
+    if (event) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    isMobileMenuOpen.value = !isMobileMenuOpen.value
   }
 
   function closeMobileMenu(): void {
-    const mobileMenu = document.getElementById('navbar-mobile')
-    const mobileToggle = document.getElementById('navbar-toggle')
-    if (mobileMenu) mobileMenu.classList.remove('open')
-    if (mobileToggle) mobileToggle.setAttribute('aria-expanded', 'false')
-  }
-
-  function onDocumentClick(e: MouseEvent): void {
-    const target = e.target as Node | null
-
-    const langSwitch = document.getElementById('lang-switch')
-    if (langSwitch && target && !langSwitch.contains(target)) {
-      setDropdownState('lang-switch', 'lang-menu', false)
-    }
-
-    const themeSwitch = document.getElementById('theme-switch')
-    if (themeSwitch && target && !themeSwitch.contains(target)) {
-      setDropdownState('theme-switch', 'theme-menu', false)
-    }
-
-    const mobileMenu = document.getElementById('navbar-mobile')
-    const mobileToggle = document.getElementById('navbar-toggle')
-    if (mobileMenu && mobileToggle && target && !mobileMenu.contains(target) && !mobileToggle.contains(target)) {
-      mobileMenu.classList.remove('open')
-      mobileToggle.setAttribute('aria-expanded', 'false')
-    }
-  }
-
-  function getResolvedTheme(): 'light' | 'dark' {
-    if (currentTheme.value !== 'system') return currentTheme.value
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
-  }
-
-  function applyTheme(): void {
-    const resolvedTheme = getResolvedTheme()
-    document.documentElement.setAttribute('data-theme', resolvedTheme)
-
-    const icons: Theme[] = ['light', 'dark', 'system']
-    icons.forEach((name) => {
-      const icon = document.getElementById(`icon-${name}`)
-      if (icon) icon.style.display = name === currentTheme.value ? 'block' : 'none'
-    })
-
-    document.querySelectorAll('.theme-option').forEach((el) => el.classList.remove('active'))
-    const activeBtn = document.getElementById(`btn-theme-${currentTheme.value}`)
-    if (activeBtn) activeBtn.classList.add('active')
+    isMobileMenuOpen.value = false
   }
 
   function setTheme(theme: Theme): void {
     currentTheme.value = theme
     localStorage.setItem('recordsaas_theme', theme)
+    isThemeMenuOpen.value = false
     applyTheme()
-    setDropdownState('theme-switch', 'theme-menu', false)
   }
 
   function toggleThemeMenu(event?: Event): void {
-    if (event) event.preventDefault()
-    const switchEl = document.getElementById('theme-switch')
-    const isOpen = !!switchEl?.classList.contains('open')
-    setDropdownState('lang-switch', 'lang-menu', false)
-    setDropdownState('theme-switch', 'theme-menu', !isOpen)
+    if (event) {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    isLangMenuOpen.value = false
+    isThemeMenuOpen.value = !isThemeMenuOpen.value
+  }
+
+  function onDocumentClick(event: MouseEvent): void {
+    const target = event.target as HTMLElement | null
+    if (!target) return
+
+    if (!target.closest('#lang-switch')) {
+      isLangMenuOpen.value = false
+    }
+
+    if (!target.closest('#theme-switch')) {
+      isThemeMenuOpen.value = false
+    }
+
+    if (!target.closest('#navbar-mobile') && !target.closest('#navbar-toggle')) {
+      isMobileMenuOpen.value = false
+    }
   }
 
   function detectTheme(): Theme {
@@ -181,32 +142,6 @@ export function useLandingPage() {
     const browserLang = navigator.language || (navigator as Navigator & { userLanguage?: string }).userLanguage || ''
     if (browserLang.toLowerCase().startsWith('pt')) return 'pt-BR'
     return 'en'
-  }
-
-  function updatePricingUI(): void {
-    const toggle = document.getElementById('region-toggle')
-    const labelGlobal = document.getElementById('label-global')
-    const labelBr = document.getElementById('label-br')
-    const pricePro = document.getElementById('price-pro')
-    const priceLifetime = document.getElementById('price-lifetime')
-
-    if (toggle) {
-      if (currentRegion.value === 'br') {
-        toggle.classList.add('active')
-        if (labelGlobal) labelGlobal.classList.remove('active')
-        if (labelBr) labelBr.classList.add('active')
-      } else {
-        toggle.classList.remove('active')
-        if (labelGlobal) labelGlobal.classList.add('active')
-        if (labelBr) labelBr.classList.remove('active')
-      }
-    }
-
-    if (pricePro) pricePro.textContent = String(PRICES.pro[currentRegion.value])
-    if (priceLifetime) priceLifetime.textContent = String(PRICES.lifetime[currentRegion.value])
-    document.querySelectorAll('.pricing-currency').forEach((el) => {
-      el.textContent = CURRENCY[currentRegion.value]
-    })
   }
 
   function generateLoginToken(): string {
@@ -244,62 +179,30 @@ export function useLandingPage() {
     window.location.assign(url.toString())
   }
 
+  function openGoogleLogin(): void {
+    startGoogleRedirectLogin()
+  }
+
+  function openGoogleLoginAndCloseMobile(): void {
+    closeMobileMenu()
+    openGoogleLogin()
+  }
+
   function logout(): void {
     currentUser.value = null
     sessionToken.value = null
     localStorage.removeItem('recordsaas_session')
     localStorage.removeItem('recordsaas_user')
-    updateAuthUI()
+  }
+
+  function logoutAndCloseMobile(): void {
+    logout()
+    closeMobileMenu()
   }
 
   function getAvatarUrl(picture?: string): string {
     if (!picture || typeof picture !== 'string') return ''
     return picture.replace(/=s\d+-c$/, '=s256-c').replace(/=s\d+$/, '=s256-c')
-  }
-
-  function updateAuthUI(): void {
-    const authContainer = document.getElementById('navbar-auth')
-    const authContainerMobile = document.getElementById('navbar-auth-mobile')
-    const navAccount = document.getElementById('nav-account')
-    const navAccountMobile = document.getElementById('nav-account-mobile')
-
-    if (currentUser.value) {
-      if (navAccount) navAccount.style.display = 'inline-flex'
-      if (navAccountMobile) navAccountMobile.style.display = 'flex'
-      const avatarUrl = getAvatarUrl(currentUser.value.picture)
-      const markup = `
-      <div class="user-menu">
-        <a href="/account/" style="display: flex;">
-          <img src="${avatarUrl}" alt="${currentUser.value.name || 'User'}" class="user-avatar" referrerpolicy="no-referrer">
-        </a>
-        <span class="user-name">${currentUser.value.name || ''}</span>
-        <button class="btn btn-ghost" onclick="logout(); closeMobileMenu()" style="padding: 6px 12px; font-size: 0.8rem;">Logout</button>
-      </div>
-      `
-      if (authContainer) authContainer.innerHTML = markup
-      if (authContainerMobile) authContainerMobile.innerHTML = markup
-    } else {
-      if (navAccount) navAccount.style.display = 'none'
-      if (navAccountMobile) navAccountMobile.style.display = 'none'
-      const label = currentLang.value === 'pt-BR' ? 'Entrar com Google' : 'Sign in with Google'
-      const markup = `
-      <button class="btn btn-ghost btn-google" onclick="openGoogleLogin(); closeMobileMenu()">
-        <svg class="google-icon" viewBox="0 0 48 48" aria-hidden="true">
-          <path fill="#EA4335" d="M24 9.5c3.5 0 6.4 1.2 8.7 3.2l6.5-6.5C35.7 2.8 30.3 0 24 0 14.6 0 6.4 5.4 2.5 13.2l7.6 5.9C12.1 12.9 17.6 9.5 24 9.5z"/>
-          <path fill="#4285F4" d="M46.5 24.5c0-1.7-.2-3.3-.5-4.9H24v9.3h12.7c-.6 3.1-2.3 5.7-4.9 7.5l7.5 5.8c4.4-4.1 6.9-10.1 6.9-17.7z"/>
-          <path fill="#FBBC05" d="M10.1 28.7c-.6-1.8-1-3.8-1-5.8s.4-4 1-5.8l-7.6-5.9C.9 14.7 0 19.2 0 24c0 4.8.9 9.3 2.5 13.8l7.6-5.9z"/>
-          <path fill="#34A853" d="M24 48c6.3 0 11.7-2.1 15.6-5.8l-7.5-5.8c-2.1 1.4-4.7 2.2-8.1 2.2-6.4 0-11.9-3.4-13.9-8.2l-7.6 5.9C6.4 42.6 14.6 48 24 48z"/>
-        </svg>
-        ${label}
-      </button>
-      `
-      if (authContainer) authContainer.innerHTML = markup
-      if (authContainerMobile) authContainerMobile.innerHTML = markup
-    }
-  }
-
-  function openGoogleLogin(): void {
-    startGoogleRedirectLogin()
   }
 
   function startCheckoutLogin(plan: CheckoutPlan): void {
@@ -332,6 +235,7 @@ export function useLandingPage() {
         } catch {
           errorPayload = null
         }
+
         if (res.status === 409 && errorPayload?.code === 'ACTIVE_SUBSCRIPTION_EXISTS') {
           showNotification(
             currentLang.value === 'pt-BR'
@@ -341,6 +245,7 @@ export function useLandingPage() {
           )
           return
         }
+
         if (res.status === 409 && errorPayload?.code === 'ACTIVE_LIFETIME_EXISTS') {
           showNotification(
             currentLang.value === 'pt-BR'
@@ -350,6 +255,7 @@ export function useLandingPage() {
           )
           return
         }
+
         throw new Error(errorPayload?.error || 'Checkout failed')
       }
 
@@ -361,38 +267,23 @@ export function useLandingPage() {
     }
   }
 
-  function showNotification(message: string, type: 'success' | 'error' | 'info' = 'info'): void {
-    const existing = document.querySelector('.notification')
-    if (existing) existing.remove()
-    const colors = { success: 'hsl(154, 60%, 42%)', error: 'hsl(0, 72%, 58%)', info: 'hsl(215, 60%, 50%)' }
-    const notification = document.createElement('div')
-    notification.className = 'notification'
-    notification.style.cssText = `
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      background: ${colors[type]};
-      color: #fff;
-      padding: 14px 24px;
-      border-radius: 12px;
-      font-size: 0.9rem;
-      font-weight: 500;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-      z-index: 1000;
-      animation: fadeInUp 0.3s ease-out;
-      max-width: 360px;
-    `
-    notification.textContent = message
-    document.body.appendChild(notification)
-    setTimeout(() => {
-      notification.style.opacity = '0'
-      notification.style.transition = 'opacity 0.3s'
-      setTimeout(() => notification.remove(), 300)
+  function showNotification(message: string, type: NotificationType = 'info'): void {
+    notification.value = { message, type }
+
+    if (notificationTimer) {
+      clearTimeout(notificationTimer)
+    }
+
+    notificationTimer = setTimeout(() => {
+      notification.value = null
+      notificationTimer = null
     }, 4000)
   }
 
   function initScrollAnimations(): void {
-    const observer = new IntersectionObserver((entries) => {
+    scrollObserver?.disconnect()
+
+    scrollObserver = new IntersectionObserver((entries) => {
       entries.forEach((entry) => {
         if (entry.isIntersecting) {
           const target = entry.target as HTMLElement
@@ -406,7 +297,7 @@ export function useLandingPage() {
       el.style.opacity = '0'
       el.style.transform = 'translateY(24px)'
       el.style.transition = 'all 0.6s cubic-bezier(0.4, 0, 0.2, 1)'
-      observer.observe(el)
+      scrollObserver?.observe(el)
     })
   }
 
@@ -418,7 +309,6 @@ export function useLandingPage() {
     try {
       sessionToken.value = savedToken
       currentUser.value = JSON.parse(savedUser) as UserSession
-      updateAuthUI()
 
       const pendingPlan = localStorage.getItem('recordsaas_pending_checkout')
       if (pendingPlan === 'pro' || pendingPlan === 'lifetime') {
@@ -429,42 +319,28 @@ export function useLandingPage() {
       const res = await fetch(`${getApiBase()}/api/auth/status`, {
         headers: { Authorization: `Bearer ${sessionToken.value}` },
       })
-      if (!res.ok) logout()
+
+      if (!res.ok) {
+        logout()
+      }
     } catch {
       logout()
     }
   }
 
-  function exposeWindowApi(): void {
-    window.setLang = setLang
-    window.toggleLangMenu = toggleLangMenu
-    window.toggleMobileMenu = toggleMobileMenu
-    window.closeMobileMenu = closeMobileMenu
-    window.setTheme = setTheme
-    window.toggleThemeMenu = toggleThemeMenu
-    window.checkout = checkout
-    window.logout = logout
-    window.openGoogleLogin = openGoogleLogin
-  }
-
-  function clearWindowApi(): void {
-    delete window.setLang
-    delete window.toggleLangMenu
-    delete window.toggleMobileMenu
-    delete window.closeMobileMenu
-    delete window.setTheme
-    delete window.toggleThemeMenu
-    delete window.checkout
-    delete window.logout
-    delete window.openGoogleLogin
-  }
-
   function setupSystemThemeListener(): void {
     systemMedia = window.matchMedia ? window.matchMedia('(prefers-color-scheme: dark)') : null
     if (!systemMedia) return
-    systemThemeListener = () => {
-      if (currentTheme.value === 'system') applyTheme()
+
+    prefersDark.value = systemMedia.matches
+
+    systemThemeListener = (event: MediaQueryListEvent) => {
+      prefersDark.value = event.matches
+      if (currentTheme.value === 'system') {
+        applyTheme()
+      }
     }
+
     if (typeof systemMedia.addEventListener === 'function') {
       systemMedia.addEventListener('change', systemThemeListener)
     } else if (typeof systemMedia.addListener === 'function') {
@@ -474,26 +350,25 @@ export function useLandingPage() {
 
   function cleanupSystemThemeListener(): void {
     if (!systemMedia || !systemThemeListener) return
+
     if (typeof systemMedia.removeEventListener === 'function') {
       systemMedia.removeEventListener('change', systemThemeListener)
     } else if (typeof systemMedia.removeListener === 'function') {
       systemMedia.removeListener(systemThemeListener)
     }
+
     systemMedia = null
     systemThemeListener = null
   }
 
   async function init(): Promise<void> {
     currentTheme.value = detectTheme()
-    applyTheme()
-    setupSystemThemeListener()
-
     currentLang.value = detectLang()
-    if (currentLang.value === 'pt-BR') currentRegion.value = 'br'
+    currentRegion.value = currentLang.value === 'pt-BR' ? 'br' : 'global'
 
-    applyI18n()
-    updatePricingUI()
-    updateAuthUI()
+    applyDocumentLang()
+    setupSystemThemeListener()
+    applyTheme()
 
     await restoreSession()
     initScrollAnimations()
@@ -506,7 +381,6 @@ export function useLandingPage() {
   }
 
   onMounted(() => {
-    exposeWindowApi()
     void init()
     document.addEventListener('click', onDocumentClick)
   })
@@ -514,17 +388,42 @@ export function useLandingPage() {
   onBeforeUnmount(() => {
     document.removeEventListener('click', onDocumentClick)
     cleanupSystemThemeListener()
-    clearWindowApi()
+    scrollObserver?.disconnect()
+
+    if (notificationTimer) {
+      clearTimeout(notificationTimer)
+      notificationTimer = null
+    }
   })
 
   return {
-    currentRegion,
+    t,
     currentLang,
     currentTheme,
-    currentUser,
-    sessionToken,
+    isAuthenticated,
+    isLangMenuOpen,
+    isThemeMenuOpen,
+    isMobileMenuOpen,
+    langCode,
+    langFlagSrc,
+    loginLabel,
+    logoutLabel,
+    userAvatarUrl,
+    userName,
+    proPrice,
+    lifetimePrice,
+    currencySymbol,
+    notification,
+    setLang,
+    toggleLangMenu,
+    toggleMobileMenu,
+    closeMobileMenu,
+    setTheme,
+    toggleThemeMenu,
     checkout,
     logout,
     openGoogleLogin,
+    openGoogleLoginAndCloseMobile,
+    logoutAndCloseMobile,
   }
 }
