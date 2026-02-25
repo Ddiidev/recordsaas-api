@@ -4,7 +4,7 @@ dist
 .env
 .appdata/
 .netlify-config/
-.netlify-deploy-functions/
+.netlify-deploy-functions*/
 .netlify-fs-patch.cjs
 netlify.deploy.toml
 netlify.toml.bak.deploy

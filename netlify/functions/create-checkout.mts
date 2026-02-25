@@ -19,6 +19,9 @@ const PRODUCT_NAMES: Record<string, string> = {
   lifetime: "RecordSaaS Lifetime",
 };
 
+// Shown on card statement as suffix (subject to Stripe/account constraints)
+const RECORDSAAS_STATEMENT_DESCRIPTOR_SUFFIX = "RECORDSAAS";
+
 // Cache to avoid repeated API calls within the same Lambda invocation
 let priceCache: Record<string, Record<string, string>> | null = null;
 
@@ -94,6 +97,27 @@ async function hasActiveSubscription(stripe: Stripe, customerId: string): Promis
   return allSubscriptions.data.some((sub) => sub.status === "active");
 }
 
+async function hasLifetimeLicense(
+  stripe: Stripe,
+  customer: Stripe.Customer
+): Promise<boolean> {
+  const metadata = customer.metadata || {};
+  if (metadata.recordsaas_active === "true" && metadata.recordsaas_plan === "lifetime") {
+    return true;
+  }
+
+  // Fallback: detect completed paid lifetime checkout sessions for this customer.
+  const sessions = await stripe.checkout.sessions.list({
+    customer: customer.id,
+    status: "complete",
+    limit: 20,
+  });
+
+  return sessions.data.some(
+    (session) => session.payment_status === "paid" && session.metadata?.plan === "lifetime"
+  );
+}
+
 export default async (req: Request, context: Context) => {
   if (req.method === "OPTIONS") {
     return new Response(null, {
@@ -144,7 +168,8 @@ export default async (req: Request, context: Context) => {
     let customerId: string;
 
     if (existingCustomers.data.length > 0) {
-      customerId = existingCustomers.data[0].id;
+      const customer = existingCustomers.data[0];
+      customerId = customer.id;
 
       if (plan === "pro") {
         const activeSubscriptionExists = await hasActiveSubscription(stripe, customerId);
@@ -153,6 +178,25 @@ export default async (req: Request, context: Context) => {
             JSON.stringify({
               error: "Active subscription already exists",
               code: "ACTIVE_SUBSCRIPTION_EXISTS",
+            }),
+            {
+              status: 409,
+              headers: {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+              },
+            }
+          );
+        }
+      }
+
+      if (plan === "lifetime") {
+        const activeLifetimeExists = await hasLifetimeLicense(stripe, customer);
+        if (activeLifetimeExists) {
+          return new Response(
+            JSON.stringify({
+              error: "Lifetime plan already active",
+              code: "ACTIVE_LIFETIME_EXISTS",
             }),
             {
               status: 409,
@@ -187,6 +231,13 @@ export default async (req: Request, context: Context) => {
         app: "recordsaas",
       },
     };
+
+    // Product-specific statement descriptor for RecordSaaS one-time purchase.
+    if (plan === "lifetime") {
+      sessionParams.payment_intent_data = {
+        statement_descriptor_suffix: RECORDSAAS_STATEMENT_DESCRIPTOR_SUFFIX,
+      };
+    }
 
     const session = await stripe.checkout.sessions.create(sessionParams);
 

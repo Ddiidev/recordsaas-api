@@ -518,6 +518,16 @@ async function checkout(plan) {
         return;
       }
 
+      if (res.status === 409 && errorPayload?.code === 'ACTIVE_LIFETIME_EXISTS') {
+        showNotification(
+          currentLang === 'pt-BR'
+            ? 'Você já possui o plano vitalício ativo. Não é possível contratar o vitalício novamente.'
+            : 'You already have an active lifetime plan. You cannot purchase lifetime again.',
+          'error'
+        );
+        return;
+      }
+
       throw new Error(errorPayload?.error || 'Checkout failed');
     }
 
