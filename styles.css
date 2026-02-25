@@ -66,6 +66,7 @@ html {
   scroll-behavior: smooth;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
 }
 
 body {
@@ -103,9 +104,9 @@ img {
 .navbar {
   position: fixed;
   top: 16px;
-  left: 24px;
-  right: 24px;
-  width: auto;
+  left: 0;
+  right: 0;
+  width: calc(100% - 48px);
   max-width: 1152px;
   margin: 0 auto;
   background: var(--bg-card); /* Changed to bg-card for better contrast if needed, or keep bg with blur */
@@ -289,9 +290,9 @@ img {
 .navbar-mobile {
   position: fixed;
   top: 78px;
-  left: 24px;
-  right: 24px;
-  width: auto;
+  left: 0;
+  right: 0;
+  width: calc(100% - 48px);
   max-width: 1152px;
   margin: 0 auto;
   background: var(--bg-card);
@@ -904,15 +905,11 @@ img {
     padding: 0 16px;
   }
   .navbar {
-    left: 16px;
-    right: 16px;
-    width: auto;
+    width: calc(100% - 32px);
     padding: 10px 16px;
   }
   .navbar-mobile {
-    left: 16px;
-    right: 16px;
-    width: auto;
+    width: calc(100% - 32px);
   }
   .hero h1 {
     font-size: 2.5rem;
