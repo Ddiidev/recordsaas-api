@@ -21,6 +21,7 @@ const PRODUCT_NAMES: Record<string, string> = {
 
 // Shown on card statement as suffix (subject to Stripe/account constraints)
 const RECORDSAAS_STATEMENT_DESCRIPTOR_SUFFIX = "RECORDSAAS";
+const RECORDSAAS_CHECKOUT_DISPLAY_NAME = "RecordSaaS";
 
 // Cache to avoid repeated API calls within the same Lambda invocation
 let priceCache: Record<string, Record<string, string>> | null = null;
@@ -116,6 +117,42 @@ async function hasLifetimeLicense(
   return sessions.data.some(
     (session) => session.payment_status === "paid" && session.metadata?.plan === "lifetime"
   );
+}
+
+function isBrandingSettingsUnsupportedError(error: unknown): boolean {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+
+  return (
+    message.includes("branding_settings") &&
+    (message.includes("unknown parameter") || message.includes("received unknown parameter"))
+  );
+}
+
+async function createCheckoutSessionWithBrandingFallback(
+  stripe: Stripe,
+  sessionParams: Stripe.Checkout.SessionCreateParams
+): Promise<Stripe.Checkout.Session> {
+  const sessionParamsWithBranding = {
+    ...sessionParams,
+    // Available in newer Stripe API versions; fallback keeps compatibility on older versions.
+    branding_settings: {
+      display_name: RECORDSAAS_CHECKOUT_DISPLAY_NAME,
+    },
+  } as Stripe.Checkout.SessionCreateParams;
+
+  try {
+    return await stripe.checkout.sessions.create(sessionParamsWithBranding);
+  } catch (error) {
+    if (!isBrandingSettingsUnsupportedError(error)) {
+      throw error;
+    }
+
+    console.warn(
+      "Stripe API version does not support branding_settings; falling back to account business name."
+    );
+    return stripe.checkout.sessions.create(sessionParams);
+  }
 }
 
 export default async (req: Request, context: Context) => {
@@ -240,7 +277,7 @@ export default async (req: Request, context: Context) => {
       };
     }
 
-    const session = await stripe.checkout.sessions.create(sessionParams);
+    const session = await createCheckoutSessionWithBrandingFallback(stripe, sessionParams);
 
     return new Response(
       JSON.stringify({ url: session.url, sessionId: session.id }),
