@@ -42,6 +42,11 @@
   status = 200
 
 [[redirects]]
+  from = "/api/auth/desktop/session"
+  to = "/.netlify/functions/auth-desktop-session"
+  status = 200
+
+[[redirects]]
   from = "/api/auth/refresh"
   to = "/.netlify/functions/auth-refresh"
   status = 200

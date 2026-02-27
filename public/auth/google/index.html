@@ -11,6 +11,7 @@
       const WEB_STATE_KEY = 'recordsaas_oauth_state';
       const DESKTOP_STATE_KEY = 'recordsaas_desktop_oauth_state';
       const DESKTOP_CONTEXT_KEY = 'recordsaas_desktop_oauth_context';
+      const DESKTOP_PENDING_KEY = 'recordsaas_desktop_login_pending';
       const DESKTOP_CONTEXT_MAX_AGE_MS = 15 * 60 * 1000;
 
       const searchParams = new URLSearchParams(window.location.search);
@@ -69,6 +70,7 @@
           const createdAt = typeof parsed.createdAt === 'number' ? parsed.createdAt : 0;
           if (!createdAt || Date.now() - createdAt > DESKTOP_CONTEXT_MAX_AGE_MS) {
             localStorage.removeItem(DESKTOP_CONTEXT_KEY);
+            localStorage.removeItem(DESKTOP_PENDING_KEY);
             return null;
           }
 
@@ -80,6 +82,7 @@
           };
         } catch (_) {
           localStorage.removeItem(DESKTOP_CONTEXT_KEY);
+          localStorage.removeItem(DESKTOP_PENDING_KEY);
           return null;
         }
       }
@@ -90,6 +93,14 @@
 
       function clearDesktopContext() {
         localStorage.removeItem(DESKTOP_CONTEXT_KEY);
+      }
+
+      function markDesktopPending() {
+        localStorage.setItem(DESKTOP_PENDING_KEY, '1');
+      }
+
+      function clearDesktopPending() {
+        localStorage.removeItem(DESKTOP_PENDING_KEY);
       }
 
       const desktopRequested = searchParams.get('desktop') === '1';
@@ -103,6 +114,7 @@
           createdAt: Date.now(),
         };
         saveDesktopContext(desktopContext);
+        markDesktopPending();
       }
 
       const isGoogleCallback = Boolean(hashParams.get('id_token') || hashParams.get('error'));
@@ -132,7 +144,9 @@
       function redirectToDesktopApp(params) {
         const redirectUri = safeDesktopRedirectUri();
         clearDesktopContext();
+        clearDesktopPending();
         localStorage.removeItem(DESKTOP_STATE_KEY);
+
         Object.entries(params).forEach(([key, value]) => {
           if (value) redirectUri.searchParams.set(key, String(value));
         });
@@ -145,6 +159,48 @@
           localStorage.setItem('recordsaas_login_error', errorCode);
         }
         window.location.replace('/');
+      }
+
+      async function tryDesktopSessionBridge() {
+        if (!desktopContext) {
+          return false;
+        }
+
+        const sessionToken = localStorage.getItem('recordsaas_session');
+        if (!sessionToken) {
+          return false;
+        }
+
+        try {
+          const res = await fetch(`${apiBase}/api/auth/desktop/session`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${sessionToken}`,
+            },
+            body: JSON.stringify({
+              nonce: desktopContext.nonce || undefined,
+            }),
+          });
+
+          if (!res.ok) {
+            if (res.status === 401) {
+              localStorage.removeItem('recordsaas_session');
+              localStorage.removeItem('recordsaas_user');
+            }
+            return false;
+          }
+
+          const data = await res.json();
+          if (!data || typeof data.desktopCode !== 'string' || data.desktopCode.length === 0) {
+            return false;
+          }
+
+          redirectToDesktopApp({ code: data.desktopCode });
+          return true;
+        } catch (_) {
+          return false;
+        }
       }
 
       function startDesktopGoogleLogin() {
@@ -238,7 +294,18 @@
 
         if (!idToken && !error) {
           if (desktopMode) {
-            startDesktopGoogleLogin();
+            const bridged = await tryDesktopSessionBridge();
+            if (bridged) {
+              return;
+            }
+
+            if (searchParams.get('start') === '1') {
+              startDesktopGoogleLogin();
+              return;
+            }
+
+            markDesktopPending();
+            redirectToLanding();
             return;
           }
 

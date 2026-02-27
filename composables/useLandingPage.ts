@@ -3,6 +3,9 @@ import { LANDING_I18N } from '../constants/landing-i18n'
 import type { CheckoutPlan, Language, Region, Theme, UserSession } from '../types/landing'
 
 const GOOGLE_CLIENT_ID = '358891470255-7h1kggp8d1io8947nll6kq51815nbpgp.apps.googleusercontent.com'
+const DESKTOP_CONTEXT_KEY = 'recordsaas_desktop_oauth_context'
+const DESKTOP_PENDING_KEY = 'recordsaas_desktop_login_pending'
+const DESKTOP_CONTEXT_MAX_AGE_MS = 15 * 60 * 1000
 
 const PRICES: Record<CheckoutPlan, Record<Region, number>> = {
   pro: { global: 10, br: 27 },
@@ -16,6 +19,17 @@ type NotificationType = 'success' | 'error' | 'info'
 interface NotificationState {
   message: string
   type: NotificationType
+}
+
+interface DesktopOAuthContext {
+  nonce: string
+  apiBase: string
+  redirectUri: string
+  createdAt: number
+}
+
+interface DesktopSessionBridgeResponse {
+  desktopCode?: string
 }
 
 export function useLandingPage() {
@@ -35,6 +49,148 @@ export function useLandingPage() {
   let systemThemeListener: ((event: MediaQueryListEvent) => void) | null = null
   let notificationTimer: ReturnType<typeof setTimeout> | null = null
   let scrollObserver: IntersectionObserver | null = null
+
+  function safeApiBase(raw: string | null): string {
+    const fallback = window.location.origin.replace(/\/$/, '')
+    if (!raw) return fallback
+
+    try {
+      const parsed = new URL(raw)
+      if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+        return fallback
+      }
+
+      return `${parsed.origin}${parsed.pathname}`.replace(/\/$/, '')
+    } catch {
+      return fallback
+    }
+  }
+
+  function sanitizeDesktopRedirectUri(raw: string | null): string {
+    const fallback = 'recordsaas://auth/callback'
+    if (!raw) return fallback
+
+    try {
+      const parsed = new URL(raw)
+      if (parsed.protocol === 'recordsaas:' && parsed.hostname === 'auth' && parsed.pathname === '/callback') {
+        return parsed.toString()
+      }
+    } catch {
+      return fallback
+    }
+
+    return fallback
+  }
+
+  function loadDesktopContext(): DesktopOAuthContext | null {
+    const raw = localStorage.getItem(DESKTOP_CONTEXT_KEY)
+    if (!raw) return null
+
+    try {
+      const parsed = JSON.parse(raw) as Partial<DesktopOAuthContext>
+
+      if (
+        typeof parsed.nonce !== 'string' ||
+        typeof parsed.apiBase !== 'string' ||
+        typeof parsed.redirectUri !== 'string' ||
+        typeof parsed.createdAt !== 'number'
+      ) {
+        localStorage.removeItem(DESKTOP_CONTEXT_KEY)
+        localStorage.removeItem(DESKTOP_PENDING_KEY)
+        return null
+      }
+
+      if (Date.now() - parsed.createdAt > DESKTOP_CONTEXT_MAX_AGE_MS) {
+        localStorage.removeItem(DESKTOP_CONTEXT_KEY)
+        localStorage.removeItem(DESKTOP_PENDING_KEY)
+        return null
+      }
+
+      return {
+        nonce: parsed.nonce,
+        apiBase: safeApiBase(parsed.apiBase),
+        redirectUri: sanitizeDesktopRedirectUri(parsed.redirectUri),
+        createdAt: parsed.createdAt,
+      }
+    } catch {
+      localStorage.removeItem(DESKTOP_CONTEXT_KEY)
+      localStorage.removeItem(DESKTOP_PENDING_KEY)
+      return null
+    }
+  }
+
+  function saveDesktopContext(context: DesktopOAuthContext): void {
+    localStorage.setItem(DESKTOP_CONTEXT_KEY, JSON.stringify(context))
+  }
+
+  function markDesktopPending(): void {
+    localStorage.setItem(DESKTOP_PENDING_KEY, '1')
+  }
+
+  function clearDesktopContext(): void {
+    localStorage.removeItem(DESKTOP_CONTEXT_KEY)
+    localStorage.removeItem(DESKTOP_PENDING_KEY)
+  }
+
+  function captureDesktopContextFromUrl(): void {
+    const params = new URLSearchParams(window.location.search)
+    if (params.get('desktop') !== '1') return
+
+    const context: DesktopOAuthContext = {
+      nonce: params.get('nonce') || '',
+      apiBase: safeApiBase(params.get('api_base')),
+      redirectUri: sanitizeDesktopRedirectUri(params.get('redirect_uri')),
+      createdAt: Date.now(),
+    }
+
+    saveDesktopContext(context)
+    markDesktopPending()
+
+    const cleanPath = `${window.location.pathname}${window.location.hash || ''}`
+    window.history.replaceState(null, document.title, cleanPath)
+  }
+
+  async function tryDesktopSessionBridge(): Promise<boolean> {
+    const desktopContext = loadDesktopContext()
+    if (!desktopContext) return false
+
+    const savedToken = localStorage.getItem('recordsaas_session')
+    if (!savedToken) return false
+
+    try {
+      const response = await fetch(`${desktopContext.apiBase}/api/auth/desktop/session`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${savedToken}`,
+        },
+        body: JSON.stringify({
+          nonce: desktopContext.nonce || undefined,
+        }),
+      })
+
+      if (!response.ok) {
+        if (response.status === 401) {
+          localStorage.removeItem('recordsaas_session')
+          localStorage.removeItem('recordsaas_user')
+        }
+        return false
+      }
+
+      const data = (await response.json()) as DesktopSessionBridgeResponse
+      if (!data.desktopCode || typeof data.desktopCode !== 'string') {
+        return false
+      }
+
+      const redirectUri = new URL(desktopContext.redirectUri)
+      redirectUri.searchParams.set('code', data.desktopCode)
+      clearDesktopContext()
+      window.location.replace(redirectUri.toString())
+      return true
+    } catch {
+      return false
+    }
+  }
 
   function getApiBase(): string {
     return window.location.origin
@@ -156,6 +312,19 @@ export function useLandingPage() {
   function startGoogleRedirectLogin(): void {
     if (!GOOGLE_CLIENT_ID) {
       showNotification(currentLang.value === 'pt-BR' ? 'Login do Google indisponivel no momento.' : 'Google login is unavailable right now.', 'error')
+      return
+    }
+
+    const desktopContext = loadDesktopContext()
+    const desktopPending = localStorage.getItem(DESKTOP_PENDING_KEY) === '1'
+    if (desktopContext && desktopPending) {
+      const desktopLoginUrl = new URL('/auth/google/', window.location.origin)
+      desktopLoginUrl.searchParams.set('desktop', '1')
+      desktopLoginUrl.searchParams.set('start', '1')
+      desktopLoginUrl.searchParams.set('nonce', desktopContext.nonce)
+      desktopLoginUrl.searchParams.set('redirect_uri', desktopContext.redirectUri)
+      desktopLoginUrl.searchParams.set('api_base', desktopContext.apiBase)
+      window.location.assign(desktopLoginUrl.toString())
       return
     }
 
@@ -366,9 +535,16 @@ export function useLandingPage() {
     currentLang.value = detectLang()
     currentRegion.value = currentLang.value === 'pt-BR' ? 'br' : 'global'
 
+    captureDesktopContextFromUrl()
+
     applyDocumentLang()
     setupSystemThemeListener()
     applyTheme()
+
+    const bridgedDesktopSession = await tryDesktopSessionBridge()
+    if (bridgedDesktopSession) {
+      return
+    }
 
     await restoreSession()
     initScrollAnimations()
