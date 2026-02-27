@@ -14,6 +14,7 @@ const DESKTOP_CODE_AUDIENCE = "recordsaas-desktop-exchange";
 const SESSION_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 const ENTITLEMENT_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 const DESKTOP_CODE_TTL_SECONDS = 120;
+const REFRESH_SESSION_EXPIRATION_GRACE_SECONDS = 7 * 24 * 60 * 60;
 
 let privateKey: KeyObject | null = null;
 let publicKey: KeyObject | null = null;
@@ -130,6 +131,10 @@ function ensureNotExpired(payload: JwtPayloadBase): void {
   }
 }
 
+interface VerifyTokenOptions {
+  maxExpiredAgeSeconds?: number;
+}
+
 function newJti(): string {
   try {
     return randomUUID();
@@ -166,7 +171,7 @@ function signToken(payload: JwtPayloadBase, audience: string, ttlSeconds: number
   return `${unsignedToken}.${encodeBase64Url(signature)}`;
 }
 
-function verifyToken(token: string, audience: string): JwtPayloadBase {
+function verifyToken(token: string, audience: string, options?: VerifyTokenOptions): JwtPayloadBase {
   const segments = token.split(".");
 
   if (segments.length !== 3) {
@@ -202,7 +207,23 @@ function verifyToken(token: string, audience: string): JwtPayloadBase {
     throw new Error("Invalid token audience");
   }
 
-  ensureNotExpired(payload);
+  const now = Math.floor(Date.now() / 1000);
+
+  if (typeof payload.nbf === "number" && payload.nbf > now) {
+    throw new Error("Token not active yet");
+  }
+
+  if (typeof payload.exp !== "number") {
+    throw new Error("Missing token expiration");
+  }
+
+  if (typeof options?.maxExpiredAgeSeconds === "number") {
+    if (payload.exp < now && now - payload.exp > options.maxExpiredAgeSeconds) {
+      throw new Error("Token expired beyond refresh grace period");
+    }
+  } else {
+    ensureNotExpired(payload);
+  }
 
   return payload;
 }
@@ -278,6 +299,18 @@ export function signDesktopCodeToken(payload: {
 
 export function verifySessionToken(token: string): SessionTokenPayload {
   const payload = verifyToken(token, SESSION_AUDIENCE) as SessionTokenPayload;
+
+  if (payload.typ !== "session" || typeof payload.email !== "string" || typeof payload.sub !== "string") {
+    throw new Error("Invalid session token payload");
+  }
+
+  return payload;
+}
+
+export function verifySessionTokenForRefresh(token: string): SessionTokenPayload {
+  const payload = verifyToken(token, SESSION_AUDIENCE, {
+    maxExpiredAgeSeconds: REFRESH_SESSION_EXPIRATION_GRACE_SECONDS,
+  }) as SessionTokenPayload;
 
   if (payload.typ !== "session" || typeof payload.email !== "string" || typeof payload.sub !== "string") {
     throw new Error("Invalid session token payload");

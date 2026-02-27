@@ -9,7 +9,7 @@ import {
   parseBearerToken,
   signEntitlementToken,
   signSessionToken,
-  verifySessionToken,
+  verifySessionTokenForRefresh,
 } from "./_lib/jwt.mts";
 
 function jsonResponse(body: unknown, status = 200) {
@@ -40,7 +40,7 @@ export default async (req: Request) => {
 
   try {
     const token = parseBearerToken(req);
-    const session = await verifySessionToken(token);
+    const session = await verifySessionTokenForRefresh(token);
 
     const stripe = getStripe();
     const resolved = await resolveLicenseByEmail(stripe, session.email);
