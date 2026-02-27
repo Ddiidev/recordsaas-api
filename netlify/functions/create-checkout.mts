@@ -216,6 +216,7 @@ export default async (req: Request, context: Context) => {
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       payment_method_types: ["card"],
+      allow_promotion_codes: true,
       line_items: [
         {
           price: priceId,
