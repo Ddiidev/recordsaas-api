@@ -10,13 +10,106 @@
       const GOOGLE_CLIENT_ID = '358891470255-7h1kggp8d1io8947nll6kq51815nbpgp.apps.googleusercontent.com';
       const WEB_STATE_KEY = 'recordsaas_oauth_state';
       const DESKTOP_STATE_KEY = 'recordsaas_desktop_oauth_state';
+      const DESKTOP_CONTEXT_KEY = 'recordsaas_desktop_oauth_context';
+      const DESKTOP_CONTEXT_MAX_AGE_MS = 15 * 60 * 1000;
 
       const searchParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.slice(1));
 
-      const desktopMode = searchParams.get('desktop') === '1';
-      const desktopNonce = searchParams.get('nonce') || '';
-      const apiBase = (searchParams.get('api_base') || window.location.origin).replace(/\/$/, '');
+      function safeApiBase(raw) {
+        const fallback = window.location.origin.replace(/\/$/, '');
+
+        if (!raw) {
+          return fallback;
+        }
+
+        try {
+          const parsed = new URL(raw);
+          if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+            return fallback;
+          }
+          return `${parsed.origin}${parsed.pathname}`.replace(/\/$/, '');
+        } catch (_) {
+          return fallback;
+        }
+      }
+
+      function sanitizeDesktopRedirectUri(raw) {
+        const fallback = 'recordsaas://auth/callback';
+
+        if (!raw) {
+          return fallback;
+        }
+
+        try {
+          const parsed = new URL(raw);
+          if (parsed.protocol === 'recordsaas:' && parsed.hostname === 'auth' && parsed.pathname === '/callback') {
+            return parsed.toString();
+          }
+        } catch (_) {
+          // ignore invalid URL and fallback
+        }
+
+        return fallback;
+      }
+
+      function loadDesktopContext() {
+        const raw = localStorage.getItem(DESKTOP_CONTEXT_KEY);
+        if (!raw) {
+          return null;
+        }
+
+        try {
+          const parsed = JSON.parse(raw);
+          if (!parsed || typeof parsed !== 'object') {
+            localStorage.removeItem(DESKTOP_CONTEXT_KEY);
+            return null;
+          }
+
+          const createdAt = typeof parsed.createdAt === 'number' ? parsed.createdAt : 0;
+          if (!createdAt || Date.now() - createdAt > DESKTOP_CONTEXT_MAX_AGE_MS) {
+            localStorage.removeItem(DESKTOP_CONTEXT_KEY);
+            return null;
+          }
+
+          return {
+            nonce: typeof parsed.nonce === 'string' ? parsed.nonce : '',
+            apiBase: safeApiBase(typeof parsed.apiBase === 'string' ? parsed.apiBase : ''),
+            redirectUri: sanitizeDesktopRedirectUri(typeof parsed.redirectUri === 'string' ? parsed.redirectUri : ''),
+            createdAt,
+          };
+        } catch (_) {
+          localStorage.removeItem(DESKTOP_CONTEXT_KEY);
+          return null;
+        }
+      }
+
+      function saveDesktopContext(context) {
+        localStorage.setItem(DESKTOP_CONTEXT_KEY, JSON.stringify(context));
+      }
+
+      function clearDesktopContext() {
+        localStorage.removeItem(DESKTOP_CONTEXT_KEY);
+      }
+
+      const desktopRequested = searchParams.get('desktop') === '1';
+      let desktopContext = loadDesktopContext();
+
+      if (desktopRequested) {
+        desktopContext = {
+          nonce: searchParams.get('nonce') || '',
+          apiBase: safeApiBase(searchParams.get('api_base')),
+          redirectUri: sanitizeDesktopRedirectUri(searchParams.get('redirect_uri')),
+          createdAt: Date.now(),
+        };
+        saveDesktopContext(desktopContext);
+      }
+
+      const isGoogleCallback = Boolean(hashParams.get('id_token') || hashParams.get('error'));
+      const desktopMode = desktopRequested || Boolean(desktopContext && isGoogleCallback);
+      const apiBase = desktopMode
+        ? safeApiBase((desktopContext && desktopContext.apiBase) || searchParams.get('api_base'))
+        : safeApiBase(searchParams.get('api_base'));
 
       function generateToken() {
         if (window.crypto && window.crypto.getRandomValues) {
@@ -29,27 +122,17 @@
       }
 
       function safeDesktopRedirectUri() {
-        const fallback = new URL('recordsaas://auth/callback');
-        const redirectRaw = searchParams.get('redirect_uri');
+        const redirectRaw = desktopContext && desktopContext.redirectUri
+          ? desktopContext.redirectUri
+          : searchParams.get('redirect_uri');
 
-        if (!redirectRaw) {
-          return fallback;
-        }
-
-        try {
-          const parsed = new URL(redirectRaw);
-          if (parsed.protocol === 'recordsaas:' && parsed.hostname === 'auth' && parsed.pathname === '/callback') {
-            return parsed;
-          }
-        } catch (_) {
-          // ignore invalid URL and fallback
-        }
-
-        return fallback;
+        return new URL(sanitizeDesktopRedirectUri(redirectRaw));
       }
 
       function redirectToDesktopApp(params) {
         const redirectUri = safeDesktopRedirectUri();
+        clearDesktopContext();
+        localStorage.removeItem(DESKTOP_STATE_KEY);
         Object.entries(params).forEach(([key, value]) => {
           if (value) redirectUri.searchParams.set(key, String(value));
         });
@@ -69,7 +152,7 @@
         const nonce = generateToken();
         localStorage.setItem(DESKTOP_STATE_KEY, state);
 
-        const callbackUri = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+        const callbackUri = `${window.location.origin}${window.location.pathname}`;
 
         const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
         url.searchParams.set('client_id', GOOGLE_CLIENT_ID);
@@ -129,7 +212,7 @@
             body: JSON.stringify({
               idToken,
               flow: 'desktop',
-              nonce: desktopNonce || undefined,
+              nonce: (desktopContext && desktopContext.nonce) || undefined,
             }),
           });
 
