@@ -1,5 +1,5 @@
 import type { Config } from "@netlify/functions";
-import { getLicensePayload, getStripe, resolveLicenseByEmail } from "./_lib/license.mts";
+import { getAuthIssuer, getPublicKeyPem } from "./_lib/jwt.mts";
 
 function jsonResponse(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
@@ -18,7 +18,7 @@ export default async (req: Request) => {
       headers: {
         "Access-Control-Allow-Origin": "*",
         "Access-Control-Allow-Methods": "GET, OPTIONS",
-        "Access-Control-Allow-Headers": "Content-Type",
+        "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
     });
   }
@@ -27,26 +27,20 @@ export default async (req: Request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const url = new URL(req.url);
-  const email = url.searchParams.get("email");
-
-  if (!email) {
-    return jsonResponse({ error: "Missing required parameter: email" }, 400);
-  }
-
   try {
-    const stripe = getStripe();
-    const resolved = await resolveLicenseByEmail(stripe, email);
-    return jsonResponse(getLicensePayload(resolved.license));
+    return jsonResponse({
+      algorithm: "RS256",
+      issuer: getAuthIssuer(),
+      publicKey: getPublicKeyPem(),
+    });
   } catch (error) {
-    console.error("Error verifying license:", error);
-    const message = error instanceof Error ? error.message : "Internal server error";
+    const message = error instanceof Error ? error.message : "Failed to load public key";
     return jsonResponse({ error: message }, 500);
   }
 };
 
 export const config: Config = {
-  path: "/api/verify-license",
+  path: "/api/auth/public-key",
 };
 
 

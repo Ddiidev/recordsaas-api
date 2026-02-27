@@ -35,3 +35,18 @@
   from = "/api/auth/status"
   to = "/.netlify/functions/auth-status"
   status = 200
+
+[[redirects]]
+  from = "/api/auth/desktop/exchange"
+  to = "/.netlify/functions/auth-desktop-exchange"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/refresh"
+  to = "/.netlify/functions/auth-refresh"
+  status = 200
+
+[[redirects]]
+  from = "/api/auth/public-key"
+  to = "/.netlify/functions/auth-public-key"
+  status = 200

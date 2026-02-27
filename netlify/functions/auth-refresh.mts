@@ -8,6 +8,7 @@ import {
 import {
   parseBearerToken,
   signEntitlementToken,
+  signSessionToken,
   verifySessionToken,
 } from "./_lib/jwt.mts";
 
@@ -27,21 +28,21 @@ export default async (req: Request) => {
       status: 204,
       headers: {
         "Access-Control-Allow-Origin": "*",
-        "Access-Control-Allow-Methods": "GET, OPTIONS",
+        "Access-Control-Allow-Methods": "POST, OPTIONS",
         "Access-Control-Allow-Headers": "Content-Type, Authorization",
       },
     });
   }
 
-  if (req.method !== "GET") {
+  if (req.method !== "POST") {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
   try {
     const token = parseBearerToken(req);
     const session = await verifySessionToken(token);
-    const stripe = getStripe();
 
+    const stripe = getStripe();
     const resolved = await resolveLicenseByEmail(stripe, session.email);
 
     const user = getUserPayload({
@@ -51,6 +52,13 @@ export default async (req: Request) => {
     });
 
     const license = getLicensePayload(resolved.license);
+
+    const sessionToken = await signSessionToken({
+      sub: session.sub,
+      email: session.email,
+      name: user.name || undefined,
+      picture: user.picture || undefined,
+    });
 
     const entitlementToken = await signEntitlementToken({
       sub: session.sub,
@@ -64,15 +72,21 @@ export default async (req: Request) => {
       watermarkRequired: license.watermarkRequired,
     });
 
-    return jsonResponse({ user, license, entitlementToken });
+    return jsonResponse({
+      user,
+      license,
+      sessionToken,
+      entitlementToken,
+    });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Failed to check auth status";
+    console.error("Auth refresh error:", error);
+    const message = error instanceof Error ? error.message : "Refresh failed";
     return jsonResponse({ error: message }, 401);
   }
 };
 
 export const config: Config = {
-  path: "/api/auth/status",
+  path: "/api/auth/refresh",
 };
 
 

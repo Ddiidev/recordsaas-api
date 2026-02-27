@@ -7,36 +7,180 @@
   </head>
   <body>
     <script>
-      const params = new URLSearchParams(window.location.hash.slice(1));
-      const error = params.get('error');
-      const idToken = params.get('id_token');
-      const state = params.get('state');
-      const expectedState = localStorage.getItem('recordsaas_oauth_state');
-      if (expectedState) localStorage.removeItem('recordsaas_oauth_state');
+      const GOOGLE_CLIENT_ID = '358891470255-7h1kggp8d1io8947nll6kq51815nbpgp.apps.googleusercontent.com';
+      const WEB_STATE_KEY = 'recordsaas_oauth_state';
+      const DESKTOP_STATE_KEY = 'recordsaas_desktop_oauth_state';
 
-      if (error || !idToken || (expectedState && state !== expectedState)) {
-        localStorage.setItem('recordsaas_login_error', error || 'invalid_state');
-        window.location.replace('/');
-      } else {
-        fetch('/api/auth/google', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ idToken }),
-        })
-          .then((res) => {
-            if (!res.ok) throw new Error('Login failed');
-            return res.json();
-          })
-          .then((data) => {
-            localStorage.setItem('recordsaas_session', data.sessionToken);
-            localStorage.setItem('recordsaas_user', JSON.stringify(data.user));
-            window.location.replace('/');
-          })
-          .catch(() => {
-            localStorage.setItem('recordsaas_login_error', 'login_failed');
-            window.location.replace('/');
-          });
+      const searchParams = new URLSearchParams(window.location.search);
+      const hashParams = new URLSearchParams(window.location.hash.slice(1));
+
+      const desktopMode = searchParams.get('desktop') === '1';
+      const desktopNonce = searchParams.get('nonce') || '';
+      const apiBase = (searchParams.get('api_base') || window.location.origin).replace(/\/$/, '');
+
+      function generateToken() {
+        if (window.crypto && window.crypto.getRandomValues) {
+          const bytes = new Uint8Array(16);
+          window.crypto.getRandomValues(bytes);
+          return Array.from(bytes).map((b) => b.toString(16).padStart(2, '0')).join('');
+        }
+
+        return Math.random().toString(36).slice(2) + Date.now().toString(36);
       }
+
+      function safeDesktopRedirectUri() {
+        const fallback = new URL('recordsaas://auth/callback');
+        const redirectRaw = searchParams.get('redirect_uri');
+
+        if (!redirectRaw) {
+          return fallback;
+        }
+
+        try {
+          const parsed = new URL(redirectRaw);
+          if (parsed.protocol === 'recordsaas:' && parsed.hostname === 'auth' && parsed.pathname === '/callback') {
+            return parsed;
+          }
+        } catch (_) {
+          // ignore invalid URL and fallback
+        }
+
+        return fallback;
+      }
+
+      function redirectToDesktopApp(params) {
+        const redirectUri = safeDesktopRedirectUri();
+        Object.entries(params).forEach(([key, value]) => {
+          if (value) redirectUri.searchParams.set(key, String(value));
+        });
+
+        window.location.replace(redirectUri.toString());
+      }
+
+      function redirectToLanding(errorCode) {
+        if (errorCode) {
+          localStorage.setItem('recordsaas_login_error', errorCode);
+        }
+        window.location.replace('/');
+      }
+
+      function startDesktopGoogleLogin() {
+        const state = generateToken();
+        const nonce = generateToken();
+        localStorage.setItem(DESKTOP_STATE_KEY, state);
+
+        const callbackUri = `${window.location.origin}${window.location.pathname}${window.location.search}`;
+
+        const url = new URL('https://accounts.google.com/o/oauth2/v2/auth');
+        url.searchParams.set('client_id', GOOGLE_CLIENT_ID);
+        url.searchParams.set('redirect_uri', callbackUri);
+        url.searchParams.set('response_type', 'id_token');
+        url.searchParams.set('scope', 'openid email profile');
+        url.searchParams.set('response_mode', 'fragment');
+        url.searchParams.set('prompt', 'select_account');
+        url.searchParams.set('nonce', nonce);
+        url.searchParams.set('state', state);
+
+        window.location.assign(url.toString());
+      }
+
+      async function completeWebFlow(idToken, state) {
+        const expectedState = localStorage.getItem(WEB_STATE_KEY);
+        if (expectedState) localStorage.removeItem(WEB_STATE_KEY);
+
+        if (expectedState && expectedState !== state) {
+          redirectToLanding('invalid_state');
+          return;
+        }
+
+        try {
+          const res = await fetch(`${apiBase}/api/auth/google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ idToken }),
+          });
+
+          if (!res.ok) {
+            throw new Error('Login failed');
+          }
+
+          const data = await res.json();
+          localStorage.setItem('recordsaas_session', data.sessionToken);
+          localStorage.setItem('recordsaas_user', JSON.stringify(data.user));
+          window.location.replace('/');
+        } catch (_) {
+          redirectToLanding('login_failed');
+        }
+      }
+
+      async function completeDesktopFlow(idToken, state) {
+        const expectedState = localStorage.getItem(DESKTOP_STATE_KEY);
+        if (expectedState) localStorage.removeItem(DESKTOP_STATE_KEY);
+
+        if (expectedState && expectedState !== state) {
+          redirectToDesktopApp({ error: 'invalid_state' });
+          return;
+        }
+
+        try {
+          const res = await fetch(`${apiBase}/api/auth/google`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              idToken,
+              flow: 'desktop',
+              nonce: desktopNonce || undefined,
+            }),
+          });
+
+          if (!res.ok) {
+            throw new Error('Desktop login failed');
+          }
+
+          const data = await res.json();
+          if (!data.desktopCode) {
+            throw new Error('Desktop code missing');
+          }
+
+          redirectToDesktopApp({ code: data.desktopCode });
+        } catch (_) {
+          redirectToDesktopApp({ error: 'desktop_login_failed' });
+        }
+      }
+
+      async function bootstrap() {
+        const error = hashParams.get('error');
+        const idToken = hashParams.get('id_token');
+        const state = hashParams.get('state');
+
+        if (!idToken && !error) {
+          if (desktopMode) {
+            startDesktopGoogleLogin();
+            return;
+          }
+
+          redirectToLanding();
+          return;
+        }
+
+        if (error || !idToken || !state) {
+          if (desktopMode) {
+            redirectToDesktopApp({ error: error || 'invalid_callback' });
+          } else {
+            redirectToLanding(error || 'invalid_callback');
+          }
+          return;
+        }
+
+        if (desktopMode) {
+          await completeDesktopFlow(idToken, state);
+          return;
+        }
+
+        await completeWebFlow(idToken, state);
+      }
+
+      void bootstrap();
     </script>
   </body>
 </html>
