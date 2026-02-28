@@ -22,9 +22,27 @@ const PRODUCT_NAMES: Record<string, string> = {
 // Shown on card statement as suffix (subject to Stripe/account constraints)
 const RECORDSAAS_STATEMENT_DESCRIPTOR_SUFFIX = "RECORDSAAS";
 const RECORDSAAS_CHECKOUT_DISPLAY_NAME = "RecordSaaS";
+const RECORDSAAS_CANONICAL_APP_URL = "https://recordsaas.app";
 
 // Cache to avoid repeated API calls within the same Lambda invocation
 let priceCache: Record<string, Record<string, string>> | null = null;
+
+function resolveAppUrl(): string {
+  const raw = (Netlify.env.get("APP_URL") || RECORDSAAS_CANONICAL_APP_URL).trim();
+
+  try {
+    const parsed = new URL(raw);
+    const hostname = parsed.hostname.toLowerCase();
+
+    if (hostname === "recordsaas-api.netlify.app" || hostname === "recordsaas.netlify.app") {
+      return RECORDSAAS_CANONICAL_APP_URL;
+    }
+
+    return parsed.origin.replace(/\/$/, "");
+  } catch {
+    return RECORDSAAS_CANONICAL_APP_URL;
+  }
+}
 
 async function getPriceMap(stripe: Stripe): Promise<Record<string, Record<string, string>>> {
   if (priceCache) return priceCache;
@@ -250,6 +268,8 @@ export default async (req: Request, context: Context) => {
       customerId = newCustomer.id;
     }
 
+    const appUrl = resolveAppUrl();
+
     const sessionParams: Stripe.Checkout.SessionCreateParams = {
       customer: customerId,
       payment_method_types: ["card"],
@@ -261,8 +281,8 @@ export default async (req: Request, context: Context) => {
         },
       ],
       mode: mode as Stripe.Checkout.SessionCreateParams.Mode,
-      success_url: `${Netlify.env.get("APP_URL") || "https://recordsaas.netlify.app"}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${Netlify.env.get("APP_URL") || "https://recordsaas.netlify.app"}/cancel`,
+      success_url: `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${appUrl}/cancel`,
       metadata: {
         plan,
         region,
