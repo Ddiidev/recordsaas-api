@@ -155,8 +155,8 @@ export function useRoadmapPage() {
   }
 
   function parseCheckboxStats(content: string): CheckboxStats {
-    const checkedMatches = content.match(/- \[x\]/gi)
-    const uncheckedMatches = content.match(/- \[ \]/g)
+    const checkedMatches = content.match(/[-*] \[x\]/gi)
+    const uncheckedMatches = content.match(/[-*] \[ \]/g)
     const checked = checkedMatches ? checkedMatches.length : 0
     const unchecked = uncheckedMatches ? uncheckedMatches.length : 0
     return { checked, total: checked + unchecked }

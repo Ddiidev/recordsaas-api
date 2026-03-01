@@ -117,7 +117,7 @@
               <span class="roadmap-progress-count">{{ parseCheckboxStats(resolvedContent(record)).checked }}/{{ parseCheckboxStats(resolvedContent(record)).total }} ({{ progressPercent(parseCheckboxStats(resolvedContent(record))) }}%)</span>
             </div>
             <div class="roadmap-progress-bar">
-              <div class="roadmap-progress-fill" :style="{ width: progressPercent(parseCheckboxStats(record.content)) + '%' }"></div>
+              <div class="roadmap-progress-fill" :style="{ width: progressPercent(parseCheckboxStats(resolvedContent(record))) + '%' }"></div>
             </div>
           </div>
 
@@ -346,14 +346,14 @@ const {
   width: 100%;
   height: 8px;
   background: var(--bg-muted);
-  border-radius: 999px;
+  border-radius: 2px;
   overflow: hidden;
 }
 
 .roadmap-progress-fill {
   height: 100%;
   background: var(--primary);
-  border-radius: 999px;
+  border-radius: 0;
   transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
