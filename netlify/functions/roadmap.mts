@@ -4,6 +4,7 @@ interface NocodoRecord {
   Id: number;
   Title?: string;
   Content?: string;
+  ContentPTbr?: string;
   Completed?: boolean;
   CreatedAt?: string;
 }
@@ -28,6 +29,7 @@ function sanitizeRecord(row: NocodoRecord) {
     id: row.Id,
     title: row.Title || "",
     content: row.Content || "",
+    contentPTbr: row.ContentPTbr || "",
     completed: Boolean(row.Completed),
     createdAt: row.CreatedAt || "",
   };
@@ -65,7 +67,7 @@ export default async (req: Request) => {
     const params = new URLSearchParams({
       sort: "-Id",
       limit: showAll ? "100" : "1",
-      fields: "Id,Title,Content,Completed,CreatedAt",
+      fields: "Id,Title,Content,ContentPTbr,Completed,CreatedAt",
     });
 
     const apiUrl = `${baseUrl}/api/v2/tables/${tableId}/records?${params}`;

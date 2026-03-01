@@ -111,10 +111,10 @@
 
           <h2 class="roadmap-card-title">{{ record.title }}</h2>
 
-          <div v-if="parseCheckboxStats(record.content).total > 0" class="roadmap-progress">
+          <div v-if="parseCheckboxStats(resolvedContent(record)).total > 0" class="roadmap-progress">
             <div class="roadmap-progress-header">
               <span class="roadmap-progress-label">{{ t('roadmap.progress_label') }}</span>
-              <span class="roadmap-progress-count">{{ parseCheckboxStats(record.content).checked }}/{{ parseCheckboxStats(record.content).total }} ({{ progressPercent(parseCheckboxStats(record.content)) }}%)</span>
+              <span class="roadmap-progress-count">{{ parseCheckboxStats(resolvedContent(record)).checked }}/{{ parseCheckboxStats(resolvedContent(record)).total }} ({{ progressPercent(parseCheckboxStats(resolvedContent(record))) }}%)</span>
             </div>
             <div class="roadmap-progress-bar">
               <div class="roadmap-progress-fill" :style="{ width: progressPercent(parseCheckboxStats(record.content)) + '%' }"></div>
@@ -190,6 +190,7 @@ const {
   toggleThemeMenu,
   toggleMobileMenu,
   closeMobileMenu,
+  resolvedContent,
   parseCheckboxStats,
   toggleHistory,
   formatDate,

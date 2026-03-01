@@ -2,6 +2,7 @@ export interface RoadmapRecord {
   id: number
   title: string
   content: string
+  contentPTbr: string
   completed: boolean
   createdAt: string
 }

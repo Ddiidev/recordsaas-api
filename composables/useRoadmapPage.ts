@@ -1,4 +1,4 @@
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { LANDING_I18N } from '../constants/landing-i18n'
 import type { Language, Theme } from '../types/landing'
 import type { CheckboxStats, RoadmapRecord, RoadmapResponse } from '../types/roadmap'
@@ -147,6 +147,13 @@ export function useRoadmapPage() {
     systemThemeListener = null
   }
 
+  function resolvedContent(record: RoadmapRecord): string {
+    if (currentLang.value === 'pt-BR' && record.contentPTbr) {
+      return record.contentPTbr
+    }
+    return record.content
+  }
+
   function parseCheckboxStats(content: string): CheckboxStats {
     const checkedMatches = content.match(/- \[x\]/gi)
     const uncheckedMatches = content.match(/- \[ \]/g)
@@ -186,7 +193,7 @@ export function useRoadmapPage() {
   async function renderAllRecords(recs: RoadmapRecord[]): Promise<void> {
     const newHtml: Record<number, string> = {}
     for (const rec of recs) {
-      newHtml[rec.id] = await renderMarkdown(rec.content)
+      newHtml[rec.id] = await renderMarkdown(resolvedContent(rec))
     }
     renderedHtml.value = newHtml
   }
@@ -257,6 +264,12 @@ export function useRoadmapPage() {
     return Math.round((stats.checked / stats.total) * 100)
   }
 
+  watch(currentLang, () => {
+    if (records.value.length > 0) {
+      void renderAllRecords(records.value)
+    }
+  })
+
   onMounted(() => {
     currentTheme.value = detectTheme()
     currentLang.value = detectLang()
@@ -296,6 +309,7 @@ export function useRoadmapPage() {
     toggleThemeMenu,
     toggleMobileMenu,
     closeMobileMenu,
+    resolvedContent,
     parseCheckboxStats,
     toggleHistory,
     formatDate,
