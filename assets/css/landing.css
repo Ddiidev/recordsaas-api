@@ -21,6 +21,25 @@
   --radius: 5px;
   --radius-lg: 6px;
   --radius-xl: 8px;
+  /* Commit tag badges */
+  --tag-fix-bg: rgba(239, 68, 68, 0.1);
+  --tag-fix-color: #dc2626;
+  --tag-feat-bg: hsla(154, 60%, 42%, 0.12);
+  --tag-feat-color: hsl(154, 60%, 32%);
+  --tag-chore-bg: rgba(100, 116, 139, 0.12);
+  --tag-chore-color: #475569;
+  --tag-docs-bg: rgba(59, 130, 246, 0.1);
+  --tag-docs-color: #2563eb;
+  --tag-refactor-bg: rgba(139, 92, 246, 0.1);
+  --tag-refactor-color: #7c3aed;
+  --tag-perf-bg: rgba(234, 88, 12, 0.1);
+  --tag-perf-color: #c2410c;
+  --tag-test-bg: rgba(234, 179, 8, 0.12);
+  --tag-test-color: #92400e;
+  --tag-breaking-bg: rgba(190, 18, 60, 0.12);
+  --tag-breaking-color: #9f1239;
+  --tag-wip-bg: rgba(245, 158, 11, 0.12);
+  --tag-wip-color: #b45309;
 }
 
 /* Dark mode definitions */
@@ -37,6 +56,25 @@
   --card-shadow: 0 4px 20px rgba(0,0,0,0.5);
   --card-shadow-hover: 0 8px 32px rgba(0,0,0,0.6);
   --primary-light: hsla(154, 60%, 50%, 0.15);
+  /* Commit tag badges – dark */
+  --tag-fix-bg: rgba(239, 68, 68, 0.18);
+  --tag-fix-color: #fca5a5;
+  --tag-feat-bg: hsla(154, 60%, 50%, 0.18);
+  --tag-feat-color: hsl(154, 60%, 72%);
+  --tag-chore-bg: rgba(148, 163, 184, 0.12);
+  --tag-chore-color: #94a3b8;
+  --tag-docs-bg: rgba(59, 130, 246, 0.18);
+  --tag-docs-color: #93c5fd;
+  --tag-refactor-bg: rgba(139, 92, 246, 0.18);
+  --tag-refactor-color: #d8b4fe;
+  --tag-perf-bg: rgba(249, 115, 22, 0.18);
+  --tag-perf-color: #fdba74;
+  --tag-test-bg: rgba(234, 179, 8, 0.18);
+  --tag-test-color: #fde047;
+  --tag-breaking-bg: rgba(190, 18, 60, 0.22);
+  --tag-breaking-color: #fda4af;
+  --tag-wip-bg: rgba(245, 158, 11, 0.18);
+  --tag-wip-color: #fbbf24;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -53,6 +91,24 @@
     --card-shadow: 0 4px 20px rgba(0,0,0,0.5);
     --card-shadow-hover: 0 8px 32px rgba(0,0,0,0.6);
     --primary-light: hsla(154, 60%, 50%, 0.15);
+    --tag-fix-bg: rgba(239, 68, 68, 0.18);
+    --tag-fix-color: #fca5a5;
+    --tag-feat-bg: hsla(154, 60%, 50%, 0.18);
+    --tag-feat-color: hsl(154, 60%, 72%);
+    --tag-chore-bg: rgba(148, 163, 184, 0.12);
+    --tag-chore-color: #94a3b8;
+    --tag-docs-bg: rgba(59, 130, 246, 0.18);
+    --tag-docs-color: #93c5fd;
+    --tag-refactor-bg: rgba(139, 92, 246, 0.18);
+    --tag-refactor-color: #d8b4fe;
+    --tag-perf-bg: rgba(249, 115, 22, 0.18);
+    --tag-perf-color: #fdba74;
+    --tag-test-bg: rgba(234, 179, 8, 0.18);
+    --tag-test-color: #fde047;
+    --tag-breaking-bg: rgba(190, 18, 60, 0.22);
+    --tag-breaking-color: #fda4af;
+    --tag-wip-bg: rgba(245, 158, 11, 0.18);
+    --tag-wip-color: #fbbf24;
   }
 }
 

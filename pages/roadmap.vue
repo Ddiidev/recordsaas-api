@@ -479,6 +479,64 @@ const {
   margin-top: 3px;
 }
 
+/* Commit tag badges */
+.roadmap-content :deep(.commit-tag) {
+  display: inline;
+  font-size: 0.75em;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: lowercase;
+  padding: 1px 7px 2px;
+  border-radius: 4px;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.roadmap-content :deep(.commit-tag-fix) {
+  background: var(--tag-fix-bg);
+  color: var(--tag-fix-color);
+}
+
+.roadmap-content :deep(.commit-tag-feat) {
+  background: var(--tag-feat-bg);
+  color: var(--tag-feat-color);
+}
+
+.roadmap-content :deep(.commit-tag-chore) {
+  background: var(--tag-chore-bg);
+  color: var(--tag-chore-color);
+}
+
+.roadmap-content :deep(.commit-tag-docs) {
+  background: var(--tag-docs-bg);
+  color: var(--tag-docs-color);
+}
+
+.roadmap-content :deep(.commit-tag-refactor) {
+  background: var(--tag-refactor-bg);
+  color: var(--tag-refactor-color);
+}
+
+.roadmap-content :deep(.commit-tag-perf) {
+  background: var(--tag-perf-bg);
+  color: var(--tag-perf-color);
+}
+
+.roadmap-content :deep(.commit-tag-test) {
+  background: var(--tag-test-bg);
+  color: var(--tag-test-color);
+}
+
+.roadmap-content :deep(.commit-tag-breaking) {
+  background: var(--tag-breaking-bg);
+  color: var(--tag-breaking-color);
+}
+
+.roadmap-content :deep(.commit-tag-wip) {
+  background: var(--tag-wip-bg);
+  color: var(--tag-wip-color);
+}
+
 /* History toggle */
 .roadmap-history-toggle {
   display: flex;

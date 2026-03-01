@@ -155,10 +155,32 @@ export function useRoadmapPage() {
     return { checked, total: checked + unchecked }
   }
 
+  const COMMIT_TAG_CLASS: Record<string, string> = {
+    fix: 'fix', bugfix: 'fix', hotfix: 'fix',
+    feat: 'feat', feature: 'feat',
+    chore: 'chore',
+    docs: 'docs',
+    refactor: 'refactor',
+    perf: 'perf',
+    test: 'test', tests: 'test',
+    breaking: 'breaking',
+    wip: 'wip',
+  }
+
+  function highlightCommitTags(html: string): string {
+    const keywords = Object.keys(COMMIT_TAG_CLASS).join('|')
+    const pattern = new RegExp(`\\b(${keywords}):`, 'gi')
+    return html.replace(pattern, (_, keyword: string) => {
+      const cls = COMMIT_TAG_CLASS[keyword.toLowerCase()]
+      return `<span class="commit-tag commit-tag-${cls}">${keyword}:</span>`
+    })
+  }
+
   async function renderMarkdown(content: string): Promise<string> {
     const { marked } = await import('marked')
     marked.setOptions({ gfm: true, breaks: true })
-    return marked.parse(content) as string
+    const html = marked.parse(content) as string
+    return highlightCommitTags(html)
   }
 
   async function renderAllRecords(recs: RoadmapRecord[]): Promise<void> {
