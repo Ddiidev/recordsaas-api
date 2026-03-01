@@ -39,7 +39,7 @@ export default defineNuxtConfig({
   nitro: {
     preset: 'static',
     prerender: {
-      routes: ['/'],
+      routes: ['/', '/roadmap'],
       crawlLinks: false,
     },
   },

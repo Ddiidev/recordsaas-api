@@ -16,14 +16,15 @@
     "netlify:link:test": "netlify link --id ad52bf01-0145-4384-81e1-522cf14df5a1 --force"
   },
   "dependencies": {
+    "marked": "^17.0.3",
     "netlify": "^23.15.1",
     "stripe": "^17.5.0"
   },
   "devDependencies": {
     "@netlify/functions": "^3.0.0",
     "@types/node": "^22.0.0",
-    "nuxt": "^3.13.2",
     "netlify-cli": "^23.15.1",
+    "nuxt": "^3.13.2",
     "typescript": "^5.5.4"
   }
 }

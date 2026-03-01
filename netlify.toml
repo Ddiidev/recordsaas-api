@@ -55,3 +55,8 @@
   from = "/api/auth/public-key"
   to = "/.netlify/functions/auth-public-key"
   status = 200
+
+[[redirects]]
+  from = "/api/roadmap"
+  to = "/.netlify/functions/roadmap"
+  status = 200

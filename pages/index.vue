@@ -21,6 +21,7 @@
     <ul class="navbar-links">
       <li><a href="#features">{{ t('nav.features') }}</a></li>
       <li><a href="#pricing">{{ t('nav.pricing') }}</a></li>
+      <li><a href="/roadmap/">{{ t('nav.roadmap') }}</a></li>
       <li v-if="isAuthenticated"><a href="/account/" class="nav-account" id="nav-account">{{ t('nav.account') }}</a></li>
       <li style="display: flex; gap: 8px;">
         <div class="lang-switch theme-switch-btn" id="theme-switch" title="Switch theme" aria-label="Switch theme" @click.stop="toggleThemeMenu">
@@ -99,6 +100,7 @@
       </button>
       <a href="#features" class="navbar-mobile-link" @click="closeMobileMenu">{{ t('nav.features') }}</a>
       <a href="#pricing" class="navbar-mobile-link" @click="closeMobileMenu">{{ t('nav.pricing') }}</a>
+      <a href="/roadmap/" class="navbar-mobile-link" @click="closeMobileMenu">{{ t('nav.roadmap') }}</a>
       <a v-if="isAuthenticated" href="/account/" class="navbar-mobile-link nav-account" id="nav-account-mobile" @click="closeMobileMenu">{{ t('nav.account') }}</a>
     </div>
   </div>
@@ -289,6 +291,7 @@
         <ul class="footer-links">
           <li><a href="#features">{{ t('nav.features') }}</a></li>
           <li><a href="#pricing">{{ t('nav.pricing') }}</a></li>
+          <li><a href="/roadmap/">{{ t('nav.roadmap') }}</a></li>
           <li><a href="https://github.com/Ddiidev/recordsaas" target="_blank" rel="noopener">GitHub</a></li>
         </ul>
         <div class="footer-copy">&copy; 2026 RecordSaaS. All rights reserved.</div>
