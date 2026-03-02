@@ -115,15 +115,15 @@
       <h1 class="animate-in delay-1" v-html="t('hero.title')"></h1>
       <p class="hero-subtitle animate-in delay-2">{{ t('hero.subtitle') }}</p>
       <div class="hero-downloads animate-in delay-3">
-        <a href="#" class="btn btn-download">
+        <a :href="downloadUrls?.windows || '#'" class="btn btn-download" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M0 3.449L9.75 2.1v9.451H0V3.449zm10.949-1.606L24 0v11.4h-13.051V1.843zM0 12.6h9.75v9.451L0 20.699V12.6zm10.949 0H24V24l-13.051-1.843V12.6z"/></svg>
           <span>Windows</span>
         </a>
-        <a href="#" class="btn btn-download">
+        <a :href="downloadUrls?.mac || '#'" class="btn btn-download" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M18.71 19.5c-.83 1.24-1.71 2.45-3.05 2.47-1.34.03-1.77-.79-3.29-.79-1.53 0-2 .77-3.27.82-1.31.05-2.3-1.32-3.14-2.53C4.25 17 2.94 12.45 4.7 9.39c.87-1.52 2.43-2.48 4.12-2.51 1.28-.02 2.5.87 3.29.87.78 0 2.26-1.07 3.81-.91.65.03 2.47.26 3.64 1.98-.09.06-2.17 1.28-2.15 3.81.03 3.02 2.65 4.03 2.68 4.04-.03.07-.42 1.44-1.38 2.83M13 3.5c.68-.83 1.14-1.99 1.01-3.15-1.02.04-2.26.68-3 1.54-.64.73-1.2 1.91-1.05 3.08 1.14.09 2.3-.64 3.04-1.47"/></svg>
           <span>macOS</span>
         </a>
-        <a href="#" class="btn btn-download">
+        <a :href="downloadUrls?.linux || '#'" class="btn btn-download" target="_blank" rel="noopener noreferrer">
           <svg viewBox="0 0 24 24" fill="currentColor" width="20" height="20"><path d="M12 20.84c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5 3.5 1.57 3.5 3.5-1.57 3.5-3.5 3.5z m7.8-5.98c-0.5-1.55-1.74-2.65-1.74-2.65-0.63-1.7-1.42-3.66-2.58-5.32 0 0-1.65-2.75-4-2.75s-3.82 2.14-5.6 4.89c-1.16 1.66-1.95 3.62-2.58 5.32 0 0-1.24 1.1-1.74 2.65-0.55 1.7-0.12 3.8 0.84 5.34 1.13 1.8 3.53 3.64 3.53 3.64l0.95-0.53s-1.43-3.62-1.04-5.65c0.39-2.03 2.1-1.76 2.1-1.76s1.17 2.92 3.54 2.92c2.37 0 3.54-2.92 3.54-2.92s1.71-0.27 2.1 1.76c0.39 2.03-1.04 5.65-1.04 5.65l0.95 0.53s2.4-1.84 3.53-3.64c0.96-1.54 1.39-3.64 0.84-5.34z"/></svg>
           <span>Linux</span>
         </a>
@@ -338,6 +338,7 @@ const {
   closeMobileMenu,
   setTheme,
   toggleThemeMenu,
+  downloadUrls,
   checkout,
   logout,
   openGoogleLogin,

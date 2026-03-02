@@ -50,6 +50,8 @@ export function useLandingPage() {
   let notificationTimer: ReturnType<typeof setTimeout> | null = null
   let scrollObserver: IntersectionObserver | null = null
 
+  const downloadUrls = ref<{ windows: string; mac: string; linux: string } | null>(null)
+
   function safeApiBase(raw: string | null): string {
     const fallback = window.location.origin.replace(/\/$/, '')
     if (!raw) return fallback
@@ -194,6 +196,19 @@ export function useLandingPage() {
 
   function getApiBase(): string {
     return window.location.origin
+  }
+
+  async function fetchDownloadUrls(): Promise<void> {
+    try {
+      const res = await fetch(`${getApiBase()}/api/latest-version`)
+      if (!res.ok) return
+      const data = await res.json()
+      if (data.downloads) {
+        downloadUrls.value = data.downloads
+      }
+    } catch {
+      // silently fail — buttons mantêm href="#"
+    }
   }
 
   function t(key: string): string {
@@ -548,6 +563,7 @@ export function useLandingPage() {
 
     await restoreSession()
     initScrollAnimations()
+    void fetchDownloadUrls()
 
     const loginError = localStorage.getItem('recordsaas_login_error')
     if (loginError) {
@@ -596,6 +612,7 @@ export function useLandingPage() {
     closeMobileMenu,
     setTheme,
     toggleThemeMenu,
+    downloadUrls,
     checkout,
     logout,
     openGoogleLogin,

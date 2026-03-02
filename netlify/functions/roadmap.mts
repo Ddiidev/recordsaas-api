@@ -51,11 +51,11 @@ export default async (req: Request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const baseUrl = Netlify.env.get("NOCODB_BASE_URL");
+  const baseUrl = "https://app.nocodb.com";
   const tableId = Netlify.env.get("NOCODB_ROADMAP_TABLE_ID");
   const apiToken = Netlify.env.get("NOCODB_API_TOKEN");
 
-  if (!baseUrl || !tableId || !apiToken) {
+  if (!tableId || !apiToken) {
     console.error("Missing NocoDB env vars");
     return jsonResponse({ error: "Server configuration error" }, 500);
   }

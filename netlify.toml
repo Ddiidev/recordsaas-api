@@ -70,3 +70,8 @@
   from = "/api/roadmap"
   to = "/.netlify/functions/roadmap"
   status = 200
+
+[[redirects]]
+  from = "/api/latest-version"
+  to = "/.netlify/functions/latest-version"
+  status = 200
