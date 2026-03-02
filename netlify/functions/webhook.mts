@@ -1,5 +1,11 @@
 import type { Context, Config } from "@netlify/functions";
 import Stripe from "stripe";
+import {
+  grantCreditsUnits,
+  hasProcessedCreditCheckoutSession,
+  markProcessedCreditCheckoutSession,
+} from "./_lib/credits.mts";
+import { ON_DEMAND_CREDITS_UNITS } from "./_lib/export-policy.mts";
 
 function getStripe(): Stripe {
   const key = Netlify.env.get("STRIPE_SECRET_KEY");
@@ -58,6 +64,26 @@ export default async (req: Request, context: Context) => {
         const region = session.metadata?.region || "global";
 
         console.log(`✅ Payment completed: customer=${customerId}, plan=${plan}, region=${region}`);
+        const customerResponse = await stripe.customers.retrieve(customerId);
+        if ("deleted" in customerResponse && customerResponse.deleted) {
+          console.warn(`Customer ${customerId} was deleted. Ignoring checkout completion.`);
+          break;
+        }
+
+        const customer = customerResponse as Stripe.Customer;
+
+        if (plan === "ondemand") {
+          if (hasProcessedCreditCheckoutSession(customer, session.id)) {
+            console.log(`⏭️ Credits checkout ${session.id} already processed. Skipping.`);
+            break;
+          }
+
+          await grantCreditsUnits(stripe, customer, ON_DEMAND_CREDITS_UNITS);
+          await markProcessedCreditCheckoutSession(stripe, customer, session.id);
+
+          console.log(`💳 On-demand credits granted: customer=${customerId}, units=${ON_DEMAND_CREDITS_UNITS}`);
+          break;
+        }
 
         // Store license info as customer metadata
         await stripe.customers.update(customerId, {
@@ -66,6 +92,8 @@ export default async (req: Request, context: Context) => {
             recordsaas_region: region,
             recordsaas_activated_at: new Date().toISOString(),
             recordsaas_active: "true",
+            recordsaas_force_free: "false",
+            recordsaas_downgrade_to_free_pending: "false",
           },
         });
 
@@ -78,6 +106,8 @@ export default async (req: Request, context: Context) => {
               recordsaas_activated_at: new Date().toISOString(),
               recordsaas_active: "true",
               recordsaas_subscription_id: session.subscription as string,
+              recordsaas_force_free: "false",
+              recordsaas_downgrade_to_free_pending: "false",
             },
           });
         }

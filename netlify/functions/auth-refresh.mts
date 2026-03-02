@@ -1,4 +1,6 @@
 import type { Config } from "@netlify/functions";
+import { resolveCreditsSnapshot } from "./_lib/credits.mts";
+import { isFreeByLicense } from "./_lib/export-policy.mts";
 import {
   getLicensePayload,
   getStripe,
@@ -52,6 +54,9 @@ export default async (req: Request) => {
     });
 
     const license = getLicensePayload(resolved.license);
+    const credits = await resolveCreditsSnapshot(stripe, resolved.customer, {
+      isFree: isFreeByLicense(license),
+    });
 
     const sessionToken = await signSessionToken({
       sub: session.sub,
@@ -75,6 +80,7 @@ export default async (req: Request) => {
     return jsonResponse({
       user,
       license,
+      credits,
       sessionToken,
       entitlementToken,
     });

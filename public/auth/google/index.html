@@ -3,9 +3,63 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Login</title>
+    <title>RecordSaaS Auth</title>
+    <link rel="icon" href="/assets/logo.png" type="image/png" />
+    <style>
+      :root {
+        color-scheme: light dark;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: radial-gradient(circle at top, #163d2f, #0b1118 60%);
+        color: #ecfdf5;
+        font-family: Inter, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      }
+
+      .auth-status {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 12px;
+        text-align: center;
+      }
+
+      .auth-status.hidden {
+        display: none;
+      }
+
+      .auth-logo {
+        width: 52px;
+        height: 52px;
+        border-radius: 12px;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      }
+
+      .auth-title {
+        font-size: 1.05rem;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        margin: 0;
+      }
+
+      .auth-subtitle {
+        font-size: 0.9rem;
+        opacity: 0.85;
+        margin: 0;
+      }
+    </style>
   </head>
   <body>
+    <div class="auth-status">
+      <img class="auth-logo" src="/assets/logo.png" alt="RecordSaaS logo" />
+      <p class="auth-title">RecordSaaS Auth</p>
+      <p class="auth-subtitle" id="auth-subtitle">Abrindo o aplicativo RecordSaaS...</p>
+    </div>
     <script>
       const GOOGLE_CLIENT_ID = '358891470255-7h1kggp8d1io8947nll6kq51815nbpgp.apps.googleusercontent.com';
       const WEB_STATE_KEY = 'recordsaas_oauth_state';
@@ -16,6 +70,8 @@
 
       const searchParams = new URLSearchParams(window.location.search);
       const hashParams = new URLSearchParams(window.location.hash.slice(1));
+      const authStatusElement = document.querySelector('.auth-status');
+      const authSubtitleElement = document.getElementById('auth-subtitle');
 
       function safeApiBase(raw) {
         const fallback = window.location.origin.replace(/\/$/, '');
@@ -105,6 +161,8 @@
 
       const desktopRequested = searchParams.get('desktop') === '1';
       let desktopContext = loadDesktopContext();
+      let desktopPending = localStorage.getItem(DESKTOP_PENDING_KEY) === '1';
+      let hasDesktopState = Boolean(localStorage.getItem(DESKTOP_STATE_KEY));
 
       if (desktopRequested) {
         desktopContext = {
@@ -115,13 +173,22 @@
         };
         saveDesktopContext(desktopContext);
         markDesktopPending();
+        desktopPending = true;
       }
 
       const isGoogleCallback = Boolean(hashParams.get('id_token') || hashParams.get('error'));
-      const desktopMode = desktopRequested || Boolean(desktopContext && isGoogleCallback);
+      const desktopMode = desktopRequested || Boolean(desktopContext && desktopPending && hasDesktopState && isGoogleCallback);
       const apiBase = desktopMode
         ? safeApiBase((desktopContext && desktopContext.apiBase) || searchParams.get('api_base'))
         : safeApiBase(searchParams.get('api_base'));
+
+      if (desktopMode) {
+        if (authSubtitleElement) {
+          authSubtitleElement.textContent = 'Abrindo o aplicativo RecordSaaS...';
+        }
+      } else if (authStatusElement) {
+        authStatusElement.classList.add('hidden');
+      }
 
       function generateToken() {
         if (window.crypto && window.crypto.getRandomValues) {
@@ -246,7 +313,7 @@
           const data = await res.json();
           localStorage.setItem('recordsaas_session', data.sessionToken);
           localStorage.setItem('recordsaas_user', JSON.stringify(data.user));
-          window.location.replace('/');
+          window.location.replace('/account/');
         } catch (_) {
           redirectToLanding('login_failed');
         }

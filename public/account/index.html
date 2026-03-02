@@ -281,6 +281,10 @@
           <span class="plan-label">Status</span>
           <span id="plan-status"><span class="badge badge-inactive" id="plan-status-badge">No active plan</span></span>
         </div>
+        <div class="plan-row" id="plan-credits-row" style="display: none;">
+          <span class="plan-label">Credits</span>
+          <span class="plan-value" id="plan-credits">—</span>
+        </div>
         <div class="plan-row" id="plan-paid-row" style="display: none;">
           <span class="plan-label">Amount paid</span>
           <span class="plan-value" id="plan-paid">—</span>
@@ -291,8 +295,10 @@
         </div>
         <div class="btn-group" id="plan-actions">
           <a href="/#pricing" class="btn btn-green" id="action-view-plans">View Plans</a>
+          <button class="btn btn-green" id="action-buy-credits" style="display: none;" onclick="buyCredits()">Buy +10 Credits</button>
           <a href="/#pricing" class="btn btn-green" id="action-upgrade-lifetime" style="display: none;">Upgrade to Lifetime</a>
           <button class="btn btn-danger" id="action-cancel-sub" style="display: none;" onclick="openCancelModal()">Cancel Subscription</button>
+          <button class="btn btn-ghost" id="action-switch-free" style="display: none;" onclick="switchToFree()">Switch to Free</button>
           <span id="action-lifetime-note" style="display: none; color: var(--text-muted); font-size: 0.9rem;">Lifetime license - no action needed</span>
         </div>
       </div>
@@ -324,6 +330,7 @@
     let sessionToken = null;
     let currentUser = null;
     let licenseData = null;
+    let creditsData = null;
     let currentTheme = 'system';
     let currentLang = 'en';
     const I18N = {
@@ -361,6 +368,13 @@
         fetchLicense();
       } else {
         showLogin();
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('credits') === 'success') {
+        showToast('Credits added successfully.', 'success');
+      } else if (params.get('credits') === 'cancel') {
+        showToast('Credits purchase cancelled.', 'info');
       }
     });
 
@@ -496,7 +510,7 @@
         localStorage.setItem('recordsaas_session', sessionToken);
         localStorage.setItem('recordsaas_user', JSON.stringify(currentUser));
         showAccount();
-        applyLicense(data.license);
+        applyLicense(data.license, data.credits || null);
       } catch (e) {
         showToast('Login failed. Please try again.', 'error');
       }
@@ -517,27 +531,39 @@
         });
         if (!res.ok) { logoutAccount(); return; }
         const data = await res.json();
-        applyLicense(data.license);
+        applyLicense(data.license, data.credits || null);
       } catch (e) { /* silent */ }
     }
 
-    function applyLicense(license) {
+    function formatCredits(units) {
+      const credits = (Number(units || 0) / 2);
+      return Number.isInteger(credits) ? `${credits}` : `${credits.toFixed(1)}`;
+    }
+
+    function applyLicense(license, credits) {
       licenseData = license;
+      creditsData = credits || null;
       const planName = document.getElementById('plan-name');
       const planActions = document.getElementById('plan-actions');
       const statusBadge = document.getElementById('plan-status-badge');
       const renewRow = document.getElementById('plan-renew-row');
       const paidRow = document.getElementById('plan-paid-row');
       const paidValue = document.getElementById('plan-paid');
+      const creditsRow = document.getElementById('plan-credits-row');
+      const creditsValue = document.getElementById('plan-credits');
       const actionViewPlans = document.getElementById('action-view-plans');
+      const actionBuyCredits = document.getElementById('action-buy-credits');
       const actionUpgradeLifetime = document.getElementById('action-upgrade-lifetime');
       const actionCancelSub = document.getElementById('action-cancel-sub');
+      const actionSwitchFree = document.getElementById('action-switch-free');
       const actionLifetimeNote = document.getElementById('action-lifetime-note');
 
       function setActionVisibility(mode) {
         if (actionViewPlans) actionViewPlans.style.display = mode === 'free' ? 'inline-block' : 'none';
+        if (actionBuyCredits) actionBuyCredits.style.display = mode === 'free' ? 'inline-block' : 'none';
         if (actionUpgradeLifetime) actionUpgradeLifetime.style.display = mode === 'pro' ? 'inline-block' : 'none';
         if (actionCancelSub) actionCancelSub.style.display = mode === 'pro' ? 'inline-block' : 'none';
+        if (actionSwitchFree) actionSwitchFree.style.display = mode === 'pro' || mode === 'lifetime' ? 'inline-block' : 'none';
         if (actionLifetimeNote) actionLifetimeNote.style.display = mode === 'lifetime' ? 'inline-block' : 'none';
       }
 
@@ -577,6 +603,85 @@
           paidValue.textContent = '—';
         }
         setActionVisibility('free');
+      }
+
+      if (creditsRow && creditsValue && credits && typeof credits.balanceUnits === 'number') {
+        creditsRow.style.display = 'flex';
+        creditsValue.textContent = `${formatCredits(credits.balanceUnits)} credits`;
+      } else if (creditsRow && creditsValue) {
+        creditsRow.style.display = 'none';
+        creditsValue.textContent = '—';
+      }
+    }
+
+    async function buyCredits() {
+      if (!sessionToken || !currentUser?.email) {
+        showToast('Please sign in first.', 'error');
+        return;
+      }
+
+      try {
+        const locale = currentLang === 'pt-BR' ? 'pt-BR' : 'en-US';
+        const res = await fetch(`${API_BASE}/api/create-checkout`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`,
+          },
+          body: JSON.stringify({
+            email: currentUser.email,
+            plan: 'ondemand',
+            locale,
+          }),
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to start credits checkout');
+        }
+
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      } catch (error) {
+        showToast(error.message || 'Failed to buy credits.', 'error');
+      }
+    }
+
+    async function switchToFree() {
+      if (!sessionToken) {
+        showToast('Please sign in first.', 'error');
+        return;
+      }
+
+      const shouldSwitch = window.confirm(
+        'Switch to Free? Pro switches at period end. Lifetime switches immediately.'
+      );
+      if (!shouldSwitch) return;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/switch-to-free`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`,
+          },
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.error || 'Failed to switch to free');
+        }
+
+        if (data.mode === 'scheduled') {
+          showToast('Downgrade scheduled for end of billing period.', 'success');
+        } else {
+          showToast('Your account is now on Free plan.', 'success');
+        }
+
+        setTimeout(() => fetchLicense(), 1200);
+      } catch (error) {
+        showToast(error.message || 'Failed to switch to free.', 'error');
       }
     }
 

@@ -10,6 +10,7 @@ import type { KeyObject } from "node:crypto";
 const SESSION_AUDIENCE = "recordsaas-api";
 const ENTITLEMENT_AUDIENCE = "recordsaas-desktop";
 const DESKTOP_CODE_AUDIENCE = "recordsaas-desktop-exchange";
+const EXPORT_GRANT_AUDIENCE = "recordsaas-desktop-export";
 
 const SESSION_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
 const ENTITLEMENT_TOKEN_TTL_SECONDS = 30 * 24 * 60 * 60;
@@ -57,6 +58,23 @@ export interface DesktopCodePayload extends JwtPayloadBase {
   name?: string;
   picture?: string;
   nonce?: string;
+}
+
+export interface ExportGrantPayload extends JwtPayloadBase {
+  typ: "export_grant";
+  sub: string;
+  email: string;
+  plan: string | null;
+  active: boolean;
+  approved: {
+    format: "mp4" | "gif";
+    resolution: "480p" | "576p" | "720p" | "1080p" | "2k";
+    fps: 30 | 60;
+    creditCostUnits: number;
+    creditCostCredits: number;
+    balanceAfterUnits: number;
+    balanceAfterCredits: number;
+  };
 }
 
 function normalizePem(rawPem: string): string {
@@ -297,6 +315,35 @@ export function signDesktopCodeToken(payload: {
   );
 }
 
+export function signExportGrantToken(payload: {
+  sub: string;
+  email: string;
+  plan: string | null;
+  active: boolean;
+  approved: {
+    format: "mp4" | "gif";
+    resolution: "480p" | "576p" | "720p" | "1080p" | "2k";
+    fps: 30 | 60;
+    creditCostUnits: number;
+    creditCostCredits: number;
+    balanceAfterUnits: number;
+    balanceAfterCredits: number;
+  };
+}): string {
+  return signToken(
+    {
+      typ: "export_grant",
+      sub: payload.sub,
+      email: payload.email,
+      plan: payload.plan,
+      active: payload.active,
+      approved: payload.approved,
+    },
+    EXPORT_GRANT_AUDIENCE,
+    2 * 60,
+  );
+}
+
 export function verifySessionToken(token: string): SessionTokenPayload {
   const payload = verifyToken(token, SESSION_AUDIENCE) as SessionTokenPayload;
 
@@ -338,6 +385,23 @@ export function verifyDesktopCodeToken(token: string): DesktopCodePayload {
 
   if (payload.typ !== "desktop_code" || typeof payload.email !== "string" || typeof payload.sub !== "string") {
     throw new Error("Invalid desktop code payload");
+  }
+
+  return payload;
+}
+
+export function verifyExportGrantToken(token: string): ExportGrantPayload {
+  const payload = verifyToken(token, EXPORT_GRANT_AUDIENCE) as ExportGrantPayload;
+  const approved = payload.approved;
+
+  if (
+    payload.typ !== "export_grant" ||
+    typeof payload.email !== "string" ||
+    typeof payload.sub !== "string" ||
+    !approved ||
+    typeof approved !== "object"
+  ) {
+    throw new Error("Invalid export grant payload");
   }
 
   return payload;

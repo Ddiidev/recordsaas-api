@@ -57,6 +57,16 @@
   status = 200
 
 [[redirects]]
+  from = "/api/export/authorize"
+  to = "/.netlify/functions/export-authorize"
+  status = 200
+
+[[redirects]]
+  from = "/api/switch-to-free"
+  to = "/.netlify/functions/switch-to-free"
+  status = 200
+
+[[redirects]]
   from = "/api/roadmap"
   to = "/.netlify/functions/roadmap"
   status = 200

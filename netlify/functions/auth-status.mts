@@ -1,4 +1,6 @@
 import type { Config } from "@netlify/functions";
+import { resolveCreditsSnapshot } from "./_lib/credits.mts";
+import { isFreeByLicense } from "./_lib/export-policy.mts";
 import {
   getLicensePayload,
   getStripe,
@@ -51,6 +53,9 @@ export default async (req: Request) => {
     });
 
     const license = getLicensePayload(resolved.license);
+    const credits = await resolveCreditsSnapshot(stripe, resolved.customer, {
+      isFree: isFreeByLicense(license),
+    });
 
     const entitlementToken = await signEntitlementToken({
       sub: session.sub,
@@ -64,7 +69,7 @@ export default async (req: Request) => {
       watermarkRequired: license.watermarkRequired,
     });
 
-    return jsonResponse({ user, license, entitlementToken });
+    return jsonResponse({ user, license, entitlementToken, credits });
   } catch (error) {
     const message = error instanceof Error ? error.message : "Failed to check auth status";
     return jsonResponse({ error: message }, 401);

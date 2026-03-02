@@ -1,5 +1,8 @@
 import type { Context, Config } from "@netlify/functions";
 import Stripe from "stripe";
+import { ON_DEMAND_CREDITS_UNITS } from "./_lib/export-policy.mts";
+import { parseBearerToken, verifySessionToken } from "./_lib/jwt.mts";
+import { resolveLicenseByEmail } from "./_lib/license.mts";
 
 function getStripe(): Stripe {
   const key = Netlify.env.get("STRIPE_SECRET_KEY");
@@ -9,7 +12,7 @@ function getStripe(): Stripe {
 
 interface CheckoutRequest {
   email: string;
-  plan: "pro" | "lifetime";
+  plan: "pro" | "lifetime" | "ondemand";
   locale: string;
 }
 
@@ -17,6 +20,7 @@ interface CheckoutRequest {
 const PRODUCT_NAMES: Record<string, string> = {
   pro: "RecordSaaS Pro",
   lifetime: "RecordSaaS Lifetime",
+  ondemand: "RecordSaaS on demand",
 };
 
 // Shown on card statement as suffix (subject to Stripe/account constraints)
@@ -50,6 +54,7 @@ async function getPriceMap(stripe: Stripe): Promise<Record<string, Record<string
   const priceMap: Record<string, Record<string, string>> = {
     pro: {},
     lifetime: {},
+    ondemand: {},
   };
 
   for (const [plan, productName] of Object.entries(PRODUCT_NAMES)) {
@@ -74,11 +79,28 @@ async function getPriceMap(stripe: Stripe): Promise<Record<string, Record<string
 
     for (const price of prices.data) {
       const currency = price.currency.toLowerCase();
+      const unitAmount = typeof price.unit_amount === "number" ? price.unit_amount : null;
+
+      if (plan === "ondemand") {
+        if (currency === "brl" && unitAmount === 1000 && !priceMap[plan].br) {
+          priceMap[plan].br = price.id;
+        } else if (currency === "usd" && unitAmount === 400 && !priceMap[plan].global) {
+          priceMap[plan].global = price.id;
+        }
+        continue;
+      }
+
       if (currency === "brl" && !priceMap[plan].br) {
         priceMap[plan].br = price.id;
       } else if (currency === "usd" && !priceMap[plan].global) {
         priceMap[plan].global = price.id;
       }
+    }
+
+    if (plan === "ondemand" && (!priceMap[plan].br || !priceMap[plan].global)) {
+      throw new Error(
+        'RecordSaaS on demand must have active prices BRL 10.00 and USD 4.00 in Stripe.',
+      );
     }
 
     if (!priceMap[plan].global) {
@@ -196,16 +218,48 @@ export default async (req: Request, context: Context) => {
     const body = (await req.json()) as CheckoutRequest;
     const { email, plan, locale } = body;
 
-    if (!email || !plan) {
+    if (!plan) {
       return new Response(
-        JSON.stringify({ error: "Missing required fields: email, plan" }),
+        JSON.stringify({ error: "Missing required fields: plan" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
 
-    if (!["pro", "lifetime"].includes(plan)) {
+    if (!["pro", "lifetime", "ondemand"].includes(plan)) {
       return new Response(
-        JSON.stringify({ error: "Invalid plan. Use 'pro' or 'lifetime'" }),
+        JSON.stringify({ error: "Invalid plan. Use 'pro', 'lifetime', or 'ondemand'" }),
+        { status: 400, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    let safeEmail = email;
+
+    if (plan === "ondemand") {
+      let sessionEmail: string;
+      try {
+        const token = parseBearerToken(req);
+        const session = verifySessionToken(token);
+        sessionEmail = session.email;
+      } catch {
+        return new Response(
+          JSON.stringify({ error: "Authentication required for on-demand credits" }),
+          { status: 401, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      if (safeEmail && safeEmail.toLowerCase().trim() !== sessionEmail.toLowerCase().trim()) {
+        return new Response(
+          JSON.stringify({ error: "Email does not match authenticated user" }),
+          { status: 403, headers: { "Content-Type": "application/json" } }
+        );
+      }
+
+      safeEmail = sessionEmail;
+    }
+
+    if (!safeEmail) {
+      return new Response(
+        JSON.stringify({ error: "Missing required field: email" }),
         { status: 400, headers: { "Content-Type": "application/json" } }
       );
     }
@@ -219,11 +273,12 @@ export default async (req: Request, context: Context) => {
     const priceMap = await getPriceMap(stripe);
     const priceId = priceMap[plan][region] || priceMap[plan].global; // fallback to global if BR price missing
     // Find or create customer by email
-    const existingCustomers = await stripe.customers.list({ email, limit: 1 });
+    const existingCustomers = await stripe.customers.list({ email: safeEmail, limit: 1 });
     let customerId: string;
+    let customer: Stripe.Customer | null = null;
 
     if (existingCustomers.data.length > 0) {
-      const customer = existingCustomers.data[0];
+      customer = existingCustomers.data[0];
       customerId = customer.id;
 
       if (plan === "pro") {
@@ -264,8 +319,35 @@ export default async (req: Request, context: Context) => {
         }
       }
     } else {
-      const newCustomer = await stripe.customers.create({ email });
+      const newCustomer = await stripe.customers.create({ email: safeEmail });
       customerId = newCustomer.id;
+      customer = newCustomer;
+    }
+
+    if (!customer) {
+      return new Response(
+        JSON.stringify({ error: "Customer not found" }),
+        { status: 404, headers: { "Content-Type": "application/json" } }
+      );
+    }
+
+    if (plan === "ondemand") {
+      const resolved = await resolveLicenseByEmail(stripe, safeEmail);
+      if (resolved.license.active) {
+        return new Response(
+          JSON.stringify({
+            error: "On-demand credits are only available to free users",
+            code: "ON_DEMAND_FREE_ONLY",
+          }),
+          {
+            status: 403,
+            headers: {
+              "Content-Type": "application/json",
+              "Access-Control-Allow-Origin": "*",
+            },
+          }
+        );
+      }
     }
 
     const appUrl = resolveAppUrl();
@@ -281,12 +363,16 @@ export default async (req: Request, context: Context) => {
         },
       ],
       mode: mode as Stripe.Checkout.SessionCreateParams.Mode,
-      success_url: `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: `${appUrl}/cancel`,
+      success_url:
+        plan === "ondemand"
+          ? `${appUrl}/account/?credits=success&session_id={CHECKOUT_SESSION_ID}`
+          : `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: plan === "ondemand" ? `${appUrl}/account/?credits=cancel` : `${appUrl}/cancel`,
       metadata: {
         plan,
         region,
         app: "recordsaas",
+        ...(plan === "ondemand" ? { credits_units: String(ON_DEMAND_CREDITS_UNITS) } : {}),
       },
     };
 

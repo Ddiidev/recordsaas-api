@@ -184,9 +184,11 @@ export async function resolveLicenseByCustomer(
   customer: Stripe.Customer,
 ): Promise<LicenseSnapshot> {
   const metadata = customer.metadata || {};
+  const forceFree = metadata.recordsaas_force_free === "true";
+  const downgradeToFreePending = metadata.recordsaas_downgrade_to_free_pending === "true";
 
   let isActive = metadata.recordsaas_active === "true";
-  let plan = metadata.recordsaas_plan || null;
+  let plan = metadata.recordsaas_plan === "free" ? null : metadata.recordsaas_plan || null;
   let region = metadata.recordsaas_region || null;
   let activatedAt = metadata.recordsaas_activated_at || null;
   let subscriptionStatus: string | null = null;
@@ -235,6 +237,7 @@ export async function resolveLicenseByCustomer(
           recordsaas_region: region || "global",
           recordsaas_activated_at: activatedAt,
           recordsaas_subscription_id: activeSubscription.id,
+          recordsaas_force_free: "false",
         },
       });
     } catch {
@@ -242,12 +245,38 @@ export async function resolveLicenseByCustomer(
     }
   }
 
-  if (plan === "lifetime") {
+  if (forceFree && !activeSubscription) {
+    isActive = false;
+    plan = null;
+    licenseValidUntil = null;
+  }
+
+  if (downgradeToFreePending && !activeSubscription) {
+    isActive = false;
+    plan = null;
+    licenseValidUntil = null;
+    subscriptionStatus = "canceled";
+
+    try {
+      await stripe.customers.update(customer.id, {
+        metadata: {
+          ...metadata,
+          recordsaas_active: "false",
+          recordsaas_plan: "free",
+          recordsaas_downgrade_to_free_pending: "false",
+        },
+      });
+    } catch {
+      // no-op
+    }
+  }
+
+  if (!forceFree && plan === "lifetime") {
     isActive = true;
     licenseValidUntil = normalizeLifetimeValidity(activatedAt);
   }
 
-  if ((!isActive || plan !== "lifetime") && !activeSubscription) {
+  if (!forceFree && (!isActive || plan !== "lifetime") && !activeSubscription) {
     try {
       const lifetimeSession = await getLifetimeSession(stripe, customer.id);
       if (lifetimeSession) {
