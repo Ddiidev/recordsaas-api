@@ -31,6 +31,49 @@ const RECORDSAAS_CANONICAL_APP_URL = "https://recordsaas.app";
 // Cache to avoid repeated API calls within the same Lambda invocation
 let priceCache: Record<string, Record<string, string>> | null = null;
 
+async function findProductByExactName(
+  stripe: Stripe,
+  productName: string,
+): Promise<Stripe.Product | null> {
+  try {
+    const searchResult = await stripe.products.search({
+      query: `name:"${productName}"`,
+      limit: 10,
+    });
+
+    const exactFromSearch = searchResult.data.find((product) => product.name === productName);
+    if (exactFromSearch) {
+      return exactFromSearch;
+    }
+  } catch (error) {
+    console.warn(`Stripe product search unavailable for "${productName}", falling back to list.`, error);
+  }
+
+  let firstExact: Stripe.Product | null = null;
+  let startingAfter: string | undefined;
+
+  for (let pageIndex = 0; pageIndex < 20; pageIndex++) {
+    const page = await stripe.products.list({
+      limit: 100,
+      ...(startingAfter ? { starting_after: startingAfter } : {}),
+    });
+
+    for (const product of page.data) {
+      if (product.name !== productName) continue;
+      if (product.active) return product;
+      if (!firstExact) firstExact = product;
+    }
+
+    if (!page.has_more || page.data.length === 0) {
+      break;
+    }
+
+    startingAfter = page.data[page.data.length - 1].id;
+  }
+
+  return firstExact;
+}
+
 function resolveAppUrl(): string {
   const raw = (Netlify.env.get("APP_URL") || RECORDSAAS_CANONICAL_APP_URL).trim();
 
@@ -58,17 +101,10 @@ async function getPriceMap(stripe: Stripe): Promise<Record<string, Record<string
   };
 
   for (const [plan, productName] of Object.entries(PRODUCT_NAMES)) {
-    // Search products by name
-    const products = await stripe.products.search({
-      query: `name:"${productName}"`,
-      limit: 1,
-    });
-
-    if (products.data.length === 0) {
+    const product = await findProductByExactName(stripe, productName);
+    if (!product) {
       throw new Error(`Product "${productName}" not found in Stripe. Create it first.`);
     }
-
-    const product = products.data[0];
 
     // Get all active prices for this product
     const prices = await stripe.prices.list({
