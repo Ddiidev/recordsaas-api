@@ -7,6 +7,19 @@ import {
 } from "./_lib/credits.mts";
 import { ON_DEMAND_CREDITS_UNITS } from "./_lib/export-policy.mts";
 
+function isCreditsPlan(plan: string): boolean {
+  return plan === "ondemand";
+}
+
+function resolveCreditsUnits(rawUnits: string | undefined): number {
+  const parsed = Number.parseInt(rawUnits || "", 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) {
+    return ON_DEMAND_CREDITS_UNITS;
+  }
+
+  return parsed;
+}
+
 function getStripe(): Stripe {
   const key = Netlify.env.get("STRIPE_SECRET_KEY");
   if (!key) throw new Error("STRIPE_SECRET_KEY not set");
@@ -72,16 +85,17 @@ export default async (req: Request, context: Context) => {
 
         const customer = customerResponse as Stripe.Customer;
 
-        if (plan === "ondemand") {
+        if (isCreditsPlan(plan)) {
           if (hasProcessedCreditCheckoutSession(customer, session.id)) {
             console.log(`⏭️ Credits checkout ${session.id} already processed. Skipping.`);
             break;
           }
 
-          await grantCreditsUnits(stripe, customer, ON_DEMAND_CREDITS_UNITS);
+          const creditsUnits = resolveCreditsUnits(session.metadata?.credits_units);
+          await grantCreditsUnits(stripe, customer, creditsUnits);
           await markProcessedCreditCheckoutSession(stripe, customer, session.id);
 
-          console.log(`💳 On-demand credits granted: customer=${customerId}, units=${ON_DEMAND_CREDITS_UNITS}`);
+          console.log(`💳 On-demand credits granted: customer=${customerId}, units=${creditsUnits}`);
           break;
         }
 

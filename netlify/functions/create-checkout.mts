@@ -4,6 +4,9 @@ import { ON_DEMAND_CREDITS_UNITS } from "./_lib/export-policy.mts";
 import { parseBearerToken, verifySessionToken } from "./_lib/jwt.mts";
 import { resolveLicenseByEmail } from "./_lib/license.mts";
 
+type CreditCheckoutPlan = "ondemand";
+type CheckoutPlan = "pro" | "lifetime" | CreditCheckoutPlan;
+
 function getStripe(): Stripe {
   const key = Netlify.env.get("STRIPE_SECRET_KEY");
   if (!key) throw new Error("STRIPE_SECRET_KEY not set");
@@ -12,16 +15,41 @@ function getStripe(): Stripe {
 
 interface CheckoutRequest {
   email: string;
-  plan: "pro" | "lifetime" | "ondemand";
+  plan: CheckoutPlan;
   locale: string;
 }
 
 // Product names must match exactly in Stripe (both test and live mode)
-const PRODUCT_NAMES: Record<string, string> = {
+const PRODUCT_NAMES: Record<CheckoutPlan, string> = {
   pro: "RecordSaaS Pro",
   lifetime: "RecordSaaS Lifetime",
   ondemand: "RecordSaaS on demand",
 };
+
+const CREDITS_UNITS_BY_PLAN: Record<CreditCheckoutPlan, number> = {
+  ondemand: ON_DEMAND_CREDITS_UNITS,
+};
+
+const CREDIT_PLAN_PRICE_CONFIG: Record<
+  CreditCheckoutPlan,
+  {
+    brlAmount: number;
+    globalAmount?: number;
+    requireGlobalPrice: boolean;
+    validationMessage: string;
+  }
+> = {
+  ondemand: {
+    brlAmount: 1000,
+    globalAmount: 400,
+    requireGlobalPrice: true,
+    validationMessage: 'RecordSaaS on demand must have active prices BRL 10.00 and USD 4.00 in Stripe.',
+  },
+};
+
+function isCreditsPlan(plan: CheckoutPlan): plan is CreditCheckoutPlan {
+  return plan === "ondemand";
+}
 
 // Shown on card statement as suffix (subject to Stripe/account constraints)
 const RECORDSAAS_STATEMENT_DESCRIPTOR_SUFFIX = "RECORDSAAS";
@@ -29,7 +57,7 @@ const RECORDSAAS_CHECKOUT_DISPLAY_NAME = "RecordSaaS";
 const RECORDSAAS_CANONICAL_APP_URL = "https://recordsaas.app";
 
 // Cache to avoid repeated API calls within the same Lambda invocation
-let priceCache: Record<string, Record<string, string>> | null = null;
+let priceCache: Record<CheckoutPlan, Record<string, string>> | null = null;
 
 async function findProductByExactName(
   stripe: Stripe,
@@ -91,16 +119,16 @@ function resolveAppUrl(): string {
   }
 }
 
-async function getPriceMap(stripe: Stripe): Promise<Record<string, Record<string, string>>> {
+async function getPriceMap(stripe: Stripe): Promise<Record<CheckoutPlan, Record<string, string>>> {
   if (priceCache) return priceCache;
 
-  const priceMap: Record<string, Record<string, string>> = {
+  const priceMap: Record<CheckoutPlan, Record<string, string>> = {
     pro: {},
     lifetime: {},
     ondemand: {},
   };
 
-  for (const [plan, productName] of Object.entries(PRODUCT_NAMES)) {
+  for (const [plan, productName] of Object.entries(PRODUCT_NAMES) as Array<[CheckoutPlan, string]>) {
     const product = await findProductByExactName(stripe, productName);
     if (!product) {
       throw new Error(`Product "${productName}" not found in Stripe. Create it first.`);
@@ -116,11 +144,17 @@ async function getPriceMap(stripe: Stripe): Promise<Record<string, Record<string
     for (const price of prices.data) {
       const currency = price.currency.toLowerCase();
       const unitAmount = typeof price.unit_amount === "number" ? price.unit_amount : null;
+      const creditsPriceConfig = isCreditsPlan(plan) ? CREDIT_PLAN_PRICE_CONFIG[plan] : null;
 
-      if (plan === "ondemand") {
-        if (currency === "brl" && unitAmount === 1000 && !priceMap[plan].br) {
+      if (creditsPriceConfig) {
+        if (currency === "brl" && unitAmount === creditsPriceConfig.brlAmount && !priceMap[plan].br) {
           priceMap[plan].br = price.id;
-        } else if (currency === "usd" && unitAmount === 400 && !priceMap[plan].global) {
+        } else if (
+          currency === "usd" &&
+          typeof creditsPriceConfig.globalAmount === "number" &&
+          unitAmount === creditsPriceConfig.globalAmount &&
+          !priceMap[plan].global
+        ) {
           priceMap[plan].global = price.id;
         }
         continue;
@@ -133,10 +167,19 @@ async function getPriceMap(stripe: Stripe): Promise<Record<string, Record<string
       }
     }
 
-    if (plan === "ondemand" && (!priceMap[plan].br || !priceMap[plan].global)) {
-      throw new Error(
-        'RecordSaaS on demand must have active prices BRL 10.00 and USD 4.00 in Stripe.',
-      );
+    if (isCreditsPlan(plan)) {
+      const creditPlanConfig = CREDIT_PLAN_PRICE_CONFIG[plan];
+      const hasRequiredBrl = Boolean(priceMap[plan].br);
+      const hasRequiredGlobal = !creditPlanConfig.requireGlobalPrice || Boolean(priceMap[plan].global);
+
+      if (!hasRequiredBrl || !hasRequiredGlobal) {
+        throw new Error(creditPlanConfig.validationMessage);
+      }
+
+      // Ensure we always have a fallback value for non-BR locales.
+      if (!priceMap[plan].global && priceMap[plan].br) {
+        priceMap[plan].global = priceMap[plan].br;
+      }
     }
 
     if (!priceMap[plan].global) {
@@ -270,7 +313,7 @@ export default async (req: Request, context: Context) => {
 
     let safeEmail = email;
 
-    if (plan === "ondemand") {
+    if (isCreditsPlan(plan)) {
       let sessionEmail: string;
       try {
         const token = parseBearerToken(req);
@@ -367,7 +410,7 @@ export default async (req: Request, context: Context) => {
       );
     }
 
-    if (plan === "ondemand") {
+    if (isCreditsPlan(plan)) {
       const resolved = await resolveLicenseByEmail(stripe, safeEmail);
       if (resolved.license.active) {
         return new Response(
@@ -400,15 +443,15 @@ export default async (req: Request, context: Context) => {
       ],
       mode: mode as Stripe.Checkout.SessionCreateParams.Mode,
       success_url:
-        plan === "ondemand"
+        isCreditsPlan(plan)
           ? `${appUrl}/account/?credits=success&session_id={CHECKOUT_SESSION_ID}`
           : `${appUrl}/success?session_id={CHECKOUT_SESSION_ID}`,
-      cancel_url: plan === "ondemand" ? `${appUrl}/account/?credits=cancel` : `${appUrl}/cancel`,
+      cancel_url: isCreditsPlan(plan) ? `${appUrl}/account/?credits=cancel` : `${appUrl}/cancel`,
       metadata: {
         plan,
         region,
         app: "recordsaas",
-        ...(plan === "ondemand" ? { credits_units: String(ON_DEMAND_CREDITS_UNITS) } : {}),
+        ...(isCreditsPlan(plan) ? { credits_units: String(CREDITS_UNITS_BY_PLAN[plan]) } : {}),
       },
     };
 
