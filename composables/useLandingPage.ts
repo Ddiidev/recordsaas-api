@@ -288,11 +288,11 @@ export function useLandingPage() {
     const target = event.target as HTMLElement | null
     if (!target) return
 
-    if (!target.closest('#lang-switch')) {
+    if (!target.closest('[data-lang-switch]')) {
       isLangMenuOpen.value = false
     }
 
-    if (!target.closest('#theme-switch')) {
+    if (!target.closest('[data-theme-switch]')) {
       isThemeMenuOpen.value = false
     }
 

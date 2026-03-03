@@ -13,8 +13,10 @@
       "dependencies": [
         "npm:@netlify/functions@3",
         "npm:@types/node@22",
+        "npm:marked@^17.0.3",
         "npm:netlify-cli@^23.15.1",
         "npm:netlify@^23.15.1",
+        "npm:nuxt@^3.13.2",
         "npm:stripe@^17.5.0",
         "npm:typescript@^5.5.4"
       ]

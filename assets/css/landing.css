@@ -374,6 +374,17 @@ img {
   padding: 16px;
 }
 
+.navbar-mobile-switches {
+  display: flex;
+  gap: 10px;
+  width: 100%;
+}
+
+.navbar-mobile-switches .lang-switch {
+  flex: 1;
+  justify-content: center;
+}
+
 .navbar-mobile-link {
   display: flex;
   align-items: center;
@@ -949,6 +960,15 @@ img {
 .tooltip-container:hover .tooltip-content {
     visibility: visible;
     opacity: 1;
+}
+
+@media (max-width: 768px) {
+  .tooltip-content {
+    width: min(220px, calc(100vw - 56px));
+    left: auto;
+    right: 0;
+    margin-left: 0;
+  }
 }
 
 /* ======================== CTA SECTION ======================== */

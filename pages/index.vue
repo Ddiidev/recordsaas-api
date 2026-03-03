@@ -24,7 +24,7 @@
       <li><a href="/roadmap/">{{ t('nav.roadmap') }}</a></li>
       <li v-if="isAuthenticated"><a href="/account/" class="nav-account" id="nav-account">{{ t('nav.account') }}</a></li>
       <li style="display: flex; gap: 8px;">
-        <div class="lang-switch theme-switch-btn" id="theme-switch" title="Switch theme" aria-label="Switch theme" @click.stop="toggleThemeMenu">
+        <div class="lang-switch theme-switch-btn" id="theme-switch" data-theme-switch title="Switch theme" aria-label="Switch theme" @click.stop="toggleThemeMenu">
           <span id="theme-icon">
             <svg v-show="currentTheme === 'light'" id="icon-light" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
             <svg v-show="currentTheme === 'dark'" id="icon-dark" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
@@ -45,7 +45,7 @@
             </div>
           </div>
         </div>
-        <div class="lang-switch" id="lang-switch" title="Switch language" @click.stop="toggleLangMenu">
+        <div class="lang-switch" id="lang-switch" data-lang-switch title="Switch language" @click.stop="toggleLangMenu">
           <span id="lang-flag"><img :src="langFlagSrc" :alt="langCode"></span> <span id="lang-code">{{ langCode }}</span>
           <div class="lang-dropdown-menu" id="lang-menu" :class="{ active: isLangMenuOpen }">
             <div class="lang-option" :class="{ active: currentLang === 'en' }" id="btn-lang-en" @click.stop="setLang('en')">
@@ -98,6 +98,43 @@
         </svg>
         {{ loginLabel }}
       </button>
+      <div class="navbar-mobile-switches">
+        <div class="lang-switch theme-switch-btn" id="theme-switch-mobile" data-theme-switch title="Switch theme" aria-label="Switch theme" @click.stop="toggleThemeMenu">
+          <svg v-show="currentTheme === 'light'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+          <svg v-show="currentTheme === 'dark'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+          <svg v-show="currentTheme === 'system'" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+          <span>Theme</span>
+          <div class="lang-dropdown-menu" id="theme-menu-mobile" :class="{ active: isThemeMenuOpen }">
+            <div class="lang-option theme-option" :class="{ active: currentTheme === 'light' }" @click.stop="setTheme('light')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>
+              <span>Light</span>
+            </div>
+            <div class="lang-option theme-option" :class="{ active: currentTheme === 'dark' }" @click.stop="setTheme('dark')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>
+              <span>Dark</span>
+            </div>
+            <div class="lang-option theme-option" :class="{ active: currentTheme === 'system' }" @click.stop="setTheme('system')">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+              <span>System</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="lang-switch" id="lang-switch-mobile" data-lang-switch title="Switch language" @click.stop="toggleLangMenu">
+          <img :src="langFlagSrc" :alt="langCode" width="20" height="14">
+          <span>{{ langCode }}</span>
+          <div class="lang-dropdown-menu" id="lang-menu-mobile" :class="{ active: isLangMenuOpen }">
+            <div class="lang-option" :class="{ active: currentLang === 'en' }" @click.stop="setLang('en')">
+              <img src="https://flagcdn.com/w20/us.png" alt="English">
+              <span>English (US)</span>
+            </div>
+            <div class="lang-option" :class="{ active: currentLang === 'pt-BR' }" @click.stop="setLang('pt-BR')">
+              <img src="https://flagcdn.com/w20/br.png" alt="Português">
+              <span>Português (BR)</span>
+            </div>
+          </div>
+        </div>
+      </div>
       <a href="#features" class="navbar-mobile-link" @click="closeMobileMenu">{{ t('nav.features') }}</a>
       <a href="#pricing" class="navbar-mobile-link" @click="closeMobileMenu">{{ t('nav.pricing') }}</a>
       <a href="/roadmap/" class="navbar-mobile-link" @click="closeMobileMenu">{{ t('nav.roadmap') }}</a>
@@ -305,15 +342,6 @@
 </template>
 
 <script setup lang="ts">
-useSeoMeta({
-  title: 'RecordSaaS — Professional Screen Recording & Editing',
-  description: 'Capture, edit, and export professional screen recordings with multi-lane timeline, webcam overlay, blur tools, and cinematic tracking.',
-  ogTitle: 'RecordSaaS — Professional Screen Recording & Editing',
-  ogDescription: 'Capture, edit, and export professional screen recordings with multi-lane timeline, webcam overlay, blur tools, and cinematic tracking.',
-  ogImage: '/assets/app-screenshot.webp',
-  twitterCard: 'summary_large_image',
-})
-
 const {
   t,
   currentLang,
@@ -345,4 +373,15 @@ const {
   openGoogleLoginAndCloseMobile,
   logoutAndCloseMobile,
 } = useLandingPage()
+
+useSeoMeta({
+  title: () => t('seo.title'),
+  description: () => t('seo.description'),
+  ogTitle: () => t('seo.title'),
+  ogDescription: () => t('seo.description'),
+  ogImage: '/assets/app-screenshot.webp',
+  twitterTitle: () => t('seo.title'),
+  twitterDescription: () => t('seo.description'),
+  twitterCard: 'summary_large_image',
+})
 </script>
