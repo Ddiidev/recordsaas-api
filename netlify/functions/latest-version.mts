@@ -1,24 +1,18 @@
 import type { Config } from "@netlify/functions";
 
-interface B2AuthResponse {
-  authorizationToken: string;
-  apiUrl: string;
-  downloadUrl: string;
+type Platform = "windows" | "mac" | "linux";
+
+interface NocodbListResponse {
+  list: Array<Record<string, unknown>>;
+  pageInfo?: {
+    totalRows?: number;
+  };
 }
 
-interface B2FileEntry {
-  fileName: string;
-  action: string;
-  fileId: string | null;
-}
-
-interface B2ListResponse {
-  files: B2FileEntry[];
-  nextFileName: string | null;
-}
-
-interface B2DownloadAuthResponse {
-  authorizationToken: string;
+interface VersionRow {
+  record: Record<string, unknown>;
+  version: string;
+  semver: string | null;
 }
 
 function jsonResponse(body: unknown, status = 200) {
@@ -39,66 +33,297 @@ function compareSemver(a: string, b: string): number {
   return aPatch - bPatch;
 }
 
-async function b2Authorize(
-  keyId: string,
-  applicationKey: string
-): Promise<B2AuthResponse> {
-  const credentials = btoa(`${keyId}:${applicationKey}`);
-  const res = await fetch(
-    "https://api.backblazeb2.com/b2api/v2/b2_authorize_account",
-    { headers: { Authorization: `Basic ${credentials}` } }
+function normalizeKey(input: string): string {
+  return input.toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+function asNonEmptyString(value: unknown): string | null {
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    return trimmed.length > 0 ? trimmed : null;
+  }
+
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return String(value);
+  }
+
+  return null;
+}
+
+function keyMatchesAlias(key: string, aliases: string[]): boolean {
+  const normalized = normalizeKey(key);
+  return aliases.some((alias) => normalizeKey(alias) === normalized);
+}
+
+function keyContainsAllTokens(key: string, tokens: string[]): boolean {
+  const normalized = normalizeKey(key);
+  return tokens.every((token) => normalized.includes(normalizeKey(token)));
+}
+
+function extractSemver(value: string): string | null {
+  const match = value.match(/\d+\.\d+\.\d+/);
+  return match?.[0] ?? null;
+}
+
+function extractUrlFromValue(value: unknown): string | null {
+  const direct = asNonEmptyString(value);
+  if (direct) return direct;
+
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const nested = extractUrlFromValue(item);
+      if (nested) return nested;
+    }
+    return null;
+  }
+
+  if (value && typeof value === "object") {
+    const objectValue = value as Record<string, unknown>;
+    const urlKeys = [
+      "url",
+      "signedUrl",
+      "signed_url",
+      "downloadUrl",
+      "download_url",
+      "path",
+    ];
+
+    for (const key of urlKeys) {
+      const candidate = asNonEmptyString(objectValue[key]);
+      if (candidate) return candidate;
+    }
+  }
+
+  return null;
+}
+
+function findStringByAliases(
+  record: Record<string, unknown>,
+  aliases: string[],
+  tokenGroups: string[][] = []
+): string | null {
+  for (const [key, value] of Object.entries(record)) {
+    if (!keyMatchesAlias(key, aliases)) continue;
+    const candidate = asNonEmptyString(value);
+    if (candidate) return candidate;
+  }
+
+  for (const tokens of tokenGroups) {
+    for (const [key, value] of Object.entries(record)) {
+      if (!keyContainsAllTokens(key, tokens)) continue;
+      const candidate = asNonEmptyString(value);
+      if (candidate) return candidate;
+    }
+  }
+
+  return null;
+}
+
+function findUrlByAliases(
+  record: Record<string, unknown>,
+  aliases: string[],
+  tokenGroups: string[][] = []
+): string | null {
+  for (const [key, value] of Object.entries(record)) {
+    if (!keyMatchesAlias(key, aliases)) continue;
+    const candidate = extractUrlFromValue(value);
+    if (candidate) return candidate;
+  }
+
+  for (const tokens of tokenGroups) {
+    for (const [key, value] of Object.entries(record)) {
+      if (!keyContainsAllTokens(key, tokens)) continue;
+      const candidate = extractUrlFromValue(value);
+      if (candidate) return candidate;
+    }
+  }
+
+  return null;
+}
+
+function detectPlatform(value: string): Platform | null {
+  const normalized = value.toLowerCase();
+
+  if (normalized.includes("win")) return "windows";
+  if (
+    normalized.includes("mac") ||
+    normalized.includes("osx") ||
+    normalized.includes("darwin")
+  ) {
+    return "mac";
+  }
+  if (
+    normalized.includes("linux") ||
+    normalized.includes("ubuntu") ||
+    normalized.includes("debian")
+  ) {
+    return "linux";
+  }
+
+  return null;
+}
+
+function extractVersionRows(records: Array<Record<string, unknown>>): VersionRow[] {
+  const versionAliases = [
+    "Version",
+    "SetupVersion",
+    "LatestVersion",
+    "ReleaseVersion",
+    "AppVersion",
+  ];
+
+  return records.flatMap((record) => {
+    const rawVersion = findStringByAliases(record, versionAliases, [["version"]]);
+    if (!rawVersion) return [];
+
+    const semver = extractSemver(rawVersion);
+    return [
+      {
+        record,
+        version: semver ?? rawVersion,
+        semver,
+      },
+    ];
+  });
+}
+
+function pickLatestVersion(rows: VersionRow[]): string | null {
+  const semverRows = rows.filter((row) => row.semver !== null) as Array<
+    VersionRow & { semver: string }
+  >;
+
+  if (semverRows.length > 0) {
+    return [...semverRows].sort((a, b) => compareSemver(a.semver, b.semver)).at(-1)!
+      .semver;
+  }
+
+  return rows[0]?.version ?? null;
+}
+
+function extractPlatformSpecificUrl(
+  record: Record<string, unknown>,
+  platform: Platform
+): string | null {
+  if (platform === "windows") {
+    return findUrlByAliases(
+      record,
+      [
+        "Windows",
+        "WindowsUrl",
+        "WindowsURL",
+        "WindowsDownloadUrl",
+        "WindowsDownloadURL",
+        "WindowsLink",
+        "WindowsSetupUrl",
+      ],
+      [
+        ["windows"],
+        ["win", "download"],
+        ["win", "url"],
+      ]
+    );
+  }
+
+  if (platform === "mac") {
+    return findUrlByAliases(
+      record,
+      [
+        "Mac",
+        "MacUrl",
+        "MacURL",
+        "MacOsUrl",
+        "MacOSUrl",
+        "MacDownloadUrl",
+        "MacLink",
+        "MacSetupUrl",
+        "OsxUrl",
+      ],
+      [
+        ["mac"],
+        ["macos"],
+        ["osx"],
+      ]
+    );
+  }
+
+  return findUrlByAliases(
+    record,
+    [
+      "Linux",
+      "LinuxUrl",
+      "LinuxURL",
+      "LinuxDownloadUrl",
+      "LinuxLink",
+      "LinuxSetupUrl",
+      "UbuntuUrl",
+      "UbuntuDownloadUrl",
+    ],
+    [
+      ["linux"],
+      ["ubuntu"],
+    ]
   );
-  if (!res.ok) throw new Error(`B2 auth failed: ${res.status}`);
-  return res.json() as Promise<B2AuthResponse>;
 }
 
-async function b2ListVersionFolders(
-  apiUrl: string,
-  authToken: string,
-  bucketId: string
-): Promise<string[]> {
-  const res = await fetch(`${apiUrl}/b2api/v2/b2_list_file_names`, {
-    method: "POST",
-    headers: {
-      Authorization: authToken,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      bucketId,
-      prefix: "",
-      delimiter: "/",
-      maxFileCount: 1000,
-    }),
-  });
-  if (!res.ok) throw new Error(`B2 list failed: ${res.status}`);
-  const data = (await res.json()) as B2ListResponse;
-  return data.files
-    .filter((f) => f.action === "folder")
-    .map((f) => f.fileName.replace(/\/$/, "").trim())
-    .filter((v) => /^\d+\.\d+\.\d+$/.test(v));
+function extractGenericDownloadUrl(record: Record<string, unknown>): string | null {
+  return findUrlByAliases(
+    record,
+    [
+      "DownloadUrl",
+      "DownloadURL",
+      "Url",
+      "URL",
+      "Link",
+      "FileUrl",
+      "InstallerUrl",
+      "SetupUrl",
+      "BinaryUrl",
+    ],
+    [
+      ["download"],
+      ["link"],
+      ["url"],
+      ["installer"],
+      ["setup"],
+    ]
+  );
 }
 
-async function b2GetDownloadAuth(
-  apiUrl: string,
-  authToken: string,
-  bucketId: string,
-  fileNamePrefix: string
-): Promise<string> {
-  const res = await fetch(`${apiUrl}/b2api/v2/b2_get_download_authorization`, {
-    method: "POST",
-    headers: {
-      Authorization: authToken,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({
-      bucketId,
-      fileNamePrefix,
-      validDurationInSeconds: 3600,
-    }),
-  });
-  if (!res.ok) throw new Error(`B2 download auth failed: ${res.status}`);
-  const data = (await res.json()) as B2DownloadAuthResponse;
-  return data.authorizationToken;
+function aggregateDownloads(
+  records: Array<Record<string, unknown>>
+): Partial<Record<Platform, string>> {
+  const downloads: Partial<Record<Platform, string>> = {};
+
+  for (const record of records) {
+    for (const platform of ["windows", "mac", "linux"] as Platform[]) {
+      if (downloads[platform]) continue;
+      const platformUrl = extractPlatformSpecificUrl(record, platform);
+      if (platformUrl) {
+        downloads[platform] = platformUrl;
+      }
+    }
+
+    const platformValue = findStringByAliases(record, [
+      "Platform",
+      "OS",
+      "OperatingSystem",
+      "TargetPlatform",
+      "TargetOS",
+      "Sistema",
+    ]);
+
+    if (!platformValue) continue;
+
+    const detectedPlatform = detectPlatform(platformValue);
+    if (!detectedPlatform || downloads[detectedPlatform]) continue;
+
+    const genericUrl = extractGenericDownloadUrl(record);
+    if (genericUrl) {
+      downloads[detectedPlatform] = genericUrl;
+    }
+  }
+
+  return downloads;
 }
 
 export default async (req: Request) => {
@@ -117,47 +342,77 @@ export default async (req: Request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const keyId = Netlify.env.get("B2_KEY_ID");
-  const applicationKey = "00569e2d441be4ddd85be5a0fb65d34818bccb8fa6";
-  const bucketId = Netlify.env.get("B2_BUCKET_ID");
-  const bucketName = "RecordSaaSSetup";
+  const baseUrl = Netlify.env.get("NOCODB_BASE_URL") || "https://app.nocodb.com";
+  const tableId =
+    Netlify.env.get("NOCODB_SETUP_VERSIONS_TABLE_ID") ||
+    Netlify.env.get("NOCODB_SETUPVERSIONS_TABLE_ID") ||
+    Netlify.env.get("NOCODB_LATEST_VERSION_TABLE_ID") ||
+    "SetupVersions";
+  const apiToken = Netlify.env.get("NOCODB_API_TOKEN");
 
-  if (!keyId || !bucketId) {
-    console.error("[latest-version] Missing B2 env vars");
+  if (!apiToken) {
+    console.error("[latest-version] Missing NOCODB_API_TOKEN");
     return jsonResponse({ error: "Server configuration error" }, 500);
   }
 
   try {
-    const auth = await b2Authorize(keyId, applicationKey);
-    const versions = await b2ListVersionFolders(
-      auth.apiUrl,
-      auth.authorizationToken,
-      bucketId
-    );
+    const params = new URLSearchParams({
+      sort: "-Id",
+      limit: "200",
+    });
 
-    if (versions.length === 0) {
+    const apiUrl = `${baseUrl}/api/v2/tables/${tableId}/records?${params}`;
+    const response = await fetch(apiUrl, {
+      headers: {
+        "xc-token": apiToken,
+      },
+    });
+
+    if (!response.ok) {
+      console.error("[latest-version] NocoDB API error:", response.status, await response.text());
+      return jsonResponse({ error: "Failed to fetch setup versions" }, 502);
+    }
+
+    const data = (await response.json()) as NocodbListResponse;
+    const records = data.list || [];
+
+    if (records.length === 0) {
       return jsonResponse({ error: "No versions found" }, 404);
     }
 
-    const latestVersion = [...versions].sort(compareSemver).at(-1)!;
-    const prefix = `${latestVersion}/`;
+    const versionRows = extractVersionRows(records);
+    const latestVersion = pickLatestVersion(versionRows);
 
-    const downloadToken = await b2GetDownloadAuth(
-      auth.apiUrl,
-      auth.authorizationToken,
-      bucketId,
-      prefix
+    if (!latestVersion) {
+      return jsonResponse({ error: "No valid version found in SetupVersions" }, 404);
+    }
+
+    const latestVersionRows = versionRows
+      .filter((row) => row.version === latestVersion || row.semver === latestVersion)
+      .map((row) => row.record);
+
+    const downloads = aggregateDownloads(latestVersionRows);
+
+    const missingPlatforms = (["windows", "mac", "linux"] as Platform[]).filter(
+      (platform) => !downloads[platform]
     );
 
-    const base = `${auth.downloadUrl}/file/${bucketName}/${prefix}`;
-    const q = `?Authorization=${encodeURIComponent(downloadToken)}`;
+    if (missingPlatforms.length > 0) {
+      console.error(
+        `[latest-version] Missing download links for ${missingPlatforms.join(", ")} in SetupVersions (version ${latestVersion})`
+      );
+      return jsonResponse(
+        { error: `Missing download links for version ${latestVersion}` },
+        502
+      );
+    }
 
     return jsonResponse({
       version: latestVersion,
       downloads: {
-        windows: `${base}RecordSaaS-Binaries-windows-latest.zip${q}`,
-        mac: `${base}RecordSaaS-Binaries-macos-latest.zip${q}`,
-        linux: `${base}RecordSaaS-Binaries-ubuntu-22.04.zip${q}`,
+        windows: downloads.windows!,
+        mac: downloads.mac!,
+        linux: downloads.linux!,
       },
     });
   } catch (error) {
