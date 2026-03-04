@@ -342,12 +342,21 @@ export default async (req: Request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const baseUrl = Netlify.env.get("NOCODB_BASE_URL") || "https://app.nocodb.com";
-  const tableId =
+  const configuredBaseUrl = Netlify.env.get("NOCODB_BASE_URL");
+  const baseUrls = Array.from(
+    new Set(
+      [configuredBaseUrl, "https://app.nocodb.com"]
+        .filter((value): value is string => Boolean(value))
+        .map((value) => value.replace(/\/+$/, ""))
+    )
+  );
+  const configuredTableId =
     Netlify.env.get("NOCODB_SETUP_VERSIONS_TABLE_ID") ||
     Netlify.env.get("NOCODB_SETUPVERSIONS_TABLE_ID") ||
-    Netlify.env.get("NOCODB_LATEST_VERSION_TABLE_ID") ||
-    "SetupVersions";
+    Netlify.env.get("NOCODB_LATEST_VERSION_TABLE_ID");
+  const tableIds = Array.from(
+    new Set([configuredTableId, "SetupVersions"].filter((value): value is string => Boolean(value)))
+  );
   const apiToken = Netlify.env.get("NOCODB_API_TOKEN");
 
   if (!apiToken) {
@@ -361,20 +370,45 @@ export default async (req: Request) => {
       limit: "200",
     });
 
-    const apiUrl = `${baseUrl}/api/v2/tables/${tableId}/records?${params}`;
-    const response = await fetch(apiUrl, {
-      headers: {
-        "xc-token": apiToken,
-      },
-    });
+    let records: Array<Record<string, unknown>> | null = null;
+    let lastError: { status: number; body: string; apiUrl: string } | null = null;
 
-    if (!response.ok) {
-      console.error("[latest-version] NocoDB API error:", response.status, await response.text());
-      return jsonResponse({ error: "Failed to fetch setup versions" }, 502);
+    for (const baseUrl of baseUrls) {
+      for (const tableId of tableIds) {
+        const apiUrl = `${baseUrl}/api/v2/tables/${tableId}/records?${params}`;
+        const response = await fetch(apiUrl, {
+          headers: {
+            "xc-token": apiToken,
+          },
+        });
+
+        if (!response.ok) {
+          const body = await response.text();
+          lastError = { status: response.status, body, apiUrl };
+          console.error("[latest-version] NocoDB API error:", response.status, body, "url:", apiUrl);
+          continue;
+        }
+
+        const data = (await response.json()) as NocodbListResponse;
+        records = data.list || [];
+        break;
+      }
+
+      if (records) break;
     }
 
-    const data = (await response.json()) as NocodbListResponse;
-    const records = data.list || [];
+    if (!records) {
+      if (lastError) {
+        console.error(
+          "[latest-version] All NocoDB attempts failed. Last attempt:",
+          lastError.status,
+          lastError.body,
+          "url:",
+          lastError.apiUrl
+        );
+      }
+      return jsonResponse({ error: "Failed to fetch setup versions" }, 502);
+    }
 
     if (records.length === 0) {
       return jsonResponse({ error: "No versions found" }, 404);
