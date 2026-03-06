@@ -65,6 +65,23 @@ function extractSemver(value: string): string | null {
   return match?.[0] ?? null;
 }
 
+function asBoolean(value: unknown): boolean | null {
+  if (typeof value === "boolean") return value;
+  if (typeof value === "number") {
+    if (value === 1) return true;
+    if (value === 0) return false;
+    return null;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "y", "sim"].includes(normalized)) return true;
+    if (["false", "0", "no", "n", "nao", "não"].includes(normalized)) return false;
+  }
+
+  return null;
+}
+
 function extractUrlFromValue(value: unknown): string | null {
   const direct = asNonEmptyString(value);
   if (direct) return direct;
@@ -185,6 +202,20 @@ function extractVersionRows(records: Array<Record<string, unknown>>): VersionRow
       },
     ];
   });
+}
+
+function isRecordActive(record: Record<string, unknown>): boolean {
+  for (const [key, value] of Object.entries(record)) {
+    if (!keyMatchesAlias(key, ["Active", "IsActive", "Enabled"])) continue;
+    return asBoolean(value) === true;
+  }
+
+  for (const [key, value] of Object.entries(record)) {
+    if (!keyContainsAllTokens(key, ["active"])) continue;
+    return asBoolean(value) === true;
+  }
+
+  return false;
 }
 
 function pickLatestVersion(rows: VersionRow[]): string | null {
@@ -415,13 +446,14 @@ export default async (req: Request) => {
     }
 
     const versionRows = extractVersionRows(records);
-    const latestVersion = pickLatestVersion(versionRows);
+    const activeVersionRows = versionRows.filter((row) => isRecordActive(row.record));
+    const latestVersion = pickLatestVersion(activeVersionRows);
 
     if (!latestVersion) {
-      return jsonResponse({ error: "No valid version found in SetupVersions" }, 404);
+      return jsonResponse({ error: "No active version found in SetupVersions" }, 404);
     }
 
-    const latestVersionRows = versionRows
+    const latestVersionRows = activeVersionRows
       .filter((row) => row.version === latestVersion || row.semver === latestVersion)
       .map((row) => row.record);
 
