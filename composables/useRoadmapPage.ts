@@ -17,6 +17,7 @@ export function useRoadmapPage() {
   const error = ref(false)
   const showingAll = ref(false)
   const loadingAll = ref(false)
+  const collapsedRecordIds = ref<number[]>([])
 
   const renderedHtml = ref<Record<number, string>>({})
 
@@ -162,6 +163,10 @@ export function useRoadmapPage() {
     return { checked, total: checked + unchecked }
   }
 
+  function getRecordStats(record: RoadmapRecord): CheckboxStats {
+    return parseCheckboxStats(resolvedContent(record))
+  }
+
   const COMMIT_TAG_CLASS: Record<string, string> = {
     fix: 'fix', bugfix: 'fix', hotfix: 'fix',
     feat: 'feat', feature: 'feat',
@@ -198,6 +203,23 @@ export function useRoadmapPage() {
     renderedHtml.value = newHtml
   }
 
+  function applyCollapsedState(recs: RoadmapRecord[]): void {
+    collapsedRecordIds.value = recs[1] ? [recs[1].id] : []
+  }
+
+  function isCollapsed(recordId: number): boolean {
+    return collapsedRecordIds.value.includes(recordId)
+  }
+
+  function toggleRecordCollapse(recordId: number): void {
+    if (isCollapsed(recordId)) {
+      collapsedRecordIds.value = collapsedRecordIds.value.filter((id) => id !== recordId)
+      return
+    }
+
+    collapsedRecordIds.value = [...collapsedRecordIds.value, recordId]
+  }
+
   async function fetchLatest(): Promise<void> {
     loading.value = true
     error.value = false
@@ -209,6 +231,7 @@ export function useRoadmapPage() {
       const data = (await res.json()) as RoadmapResponse
       records.value = data.records
       total.value = data.total
+      applyCollapsedState(data.records)
       await renderAllRecords(data.records)
     } catch {
       error.value = true
@@ -228,6 +251,7 @@ export function useRoadmapPage() {
       records.value = data.records
       total.value = data.total
       showingAll.value = true
+      applyCollapsedState(data.records)
       await renderAllRecords(data.records)
     } catch {
       error.value = true
@@ -303,6 +327,7 @@ export function useRoadmapPage() {
     showingAll,
     loadingAll,
     renderedHtml,
+    collapsedRecordIds,
     setLang,
     toggleLangMenu,
     setTheme,
@@ -311,6 +336,9 @@ export function useRoadmapPage() {
     closeMobileMenu,
     resolvedContent,
     parseCheckboxStats,
+    getRecordStats,
+    isCollapsed,
+    toggleRecordCollapse,
     toggleHistory,
     formatDate,
     progressPercent,

@@ -70,6 +70,7 @@ Notes:
 - Every new/changed endpoint must have matching redirect configuration.
 - Avoid silent route drift between frontend calls and redirects.
 - `netlify/functions/latest-version.mts` must only expose the most recent NocoDB row/version where `active = true`.
+- `netlify/functions/roadmap.mts` returns the latest two roadmap entries by default; full history remains behind `?all=true`.
 
 ### Visual design parity and landing styling
 
@@ -124,6 +125,8 @@ Minimum checks:
 5. Checkout init remains functional (`/api/create-checkout`).
 6. If function routes changed, matching redirects exist in `netlify.toml`.
 7. `/api/latest-version` returns the most recent active NocoDB version and ignores newer inactive rows.
+8. Landing and roadmap expose the support email in visible locations with EN/PT-BR parity.
+9. `/roadmap` shows the latest two entries by default and starts the penultimate entry collapsed.
 
 ## 7) Cross-Repo Escalation Rule
 

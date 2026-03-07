@@ -300,6 +300,18 @@
           <button class="btn btn-primary btn-lg" @click="checkout('lifetime')">{{ t('pricing.lifetime.cta') }}</button>
         </div>
       </div>
+
+      <div class="support-strip">
+        <div class="support-strip-copy">
+          <span class="support-strip-badge">{{ t('support.badge') }}</span>
+          <h3>{{ t('support.title') }}</h3>
+          <p>{{ t('support.description') }}</p>
+        </div>
+        <a :href="supportMailto" class="support-email-link">
+          <span class="support-email-caption">{{ t('support.email_label') }}</span>
+          <strong>{{ supportEmail }}</strong>
+        </a>
+      </div>
     </div>
   </section>
 
@@ -329,6 +341,7 @@
           <li><a href="#features">{{ t('nav.features') }}</a></li>
           <li><a href="#pricing">{{ t('nav.pricing') }}</a></li>
           <li><a href="/roadmap/">{{ t('nav.roadmap') }}</a></li>
+          <li><a :href="supportMailto">{{ supportEmail }}</a></li>
           <li><a href="https://github.com/Ddiidev/recordsaas" target="_blank" rel="noopener">GitHub</a></li>
         </ul>
         <div class="footer-copy">&copy; 2026 RecordSaaS. All rights reserved.</div>
@@ -342,6 +355,8 @@
 </template>
 
 <script setup lang="ts">
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../constants/support'
+
 const {
   t,
   currentLang,
@@ -384,4 +399,7 @@ useSeoMeta({
   twitterDescription: () => t('seo.description'),
   twitterCard: 'summary_large_image',
 })
+
+const supportEmail = SUPPORT_EMAIL
+const supportMailto = SUPPORT_MAILTO
 </script>

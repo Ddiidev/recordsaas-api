@@ -751,6 +751,67 @@ img {
   flex-wrap: wrap;
 }
 
+.support-strip {
+  margin: 40px auto 0;
+  max-width: 860px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, var(--bg-card) 0%, var(--primary-light) 100%);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--card-shadow);
+}
+
+.support-strip-copy h3 {
+  margin-bottom: 8px;
+  font-size: 1.25rem;
+}
+
+.support-strip-copy p {
+  color: var(--text-muted);
+  max-width: 560px;
+}
+
+.support-strip-badge {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.support-email-link {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 220px;
+  padding: 14px 18px;
+  border-radius: var(--radius-lg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  text-decoration: none;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+}
+
+.support-email-link:hover {
+  border-color: var(--primary);
+  transform: translateY(-1px);
+}
+
+.support-email-caption {
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .pricing-card {
   background: var(--bg-card);
   border: 1px solid var(--border);
@@ -1105,6 +1166,17 @@ img {
   .footer-links {
       flex-direction: column;
       gap: 16px;
+  }
+
+  .support-strip {
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 20px;
+  }
+
+  .support-email-link {
+    width: 100%;
+    min-width: 0;
   }
 }
 

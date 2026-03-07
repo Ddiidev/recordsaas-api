@@ -78,6 +78,11 @@
       <div class="roadmap-header">
         <h1>{{ t('roadmap.title') }}</h1>
         <p>{{ t('roadmap.subtitle') }}</p>
+        <div class="roadmap-support">
+          <span class="roadmap-support-badge">{{ t('support.badge') }}</span>
+          <span class="roadmap-support-copy">{{ t('roadmap.support_copy') }}</span>
+          <a :href="supportMailto" class="roadmap-support-link">{{ supportEmail }}</a>
+        </div>
       </div>
 
       <!-- Loading -->
@@ -100,8 +105,26 @@
 
       <!-- Roadmap Cards -->
       <template v-else>
-        <div v-for="record in records" :key="record.id" class="roadmap-card">
-          <div class="roadmap-card-meta">
+        <div
+          v-for="record in records"
+          :key="record.id"
+          class="roadmap-card"
+          :class="{ 'roadmap-card-collapsed': isCollapsed(record.id) }"
+        >
+          <button
+            class="roadmap-card-toggle"
+            type="button"
+            :aria-expanded="(!isCollapsed(record.id)).toString()"
+            @click="toggleRecordCollapse(record.id)"
+          >
+            <h2 class="roadmap-card-title">{{ record.title }}</h2>
+            <span class="roadmap-card-chevron" :class="{ collapsed: isCollapsed(record.id) }" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
+            </span>
+            <span class="sr-only">{{ isCollapsed(record.id) ? t('roadmap.expand') : t('roadmap.collapse') }}</span>
+          </button>
+
+          <div v-if="!isCollapsed(record.id)" class="roadmap-card-meta">
             <span class="roadmap-date">{{ t('roadmap.date_label') }} {{ formatDate(record.createdAt) }}</span>
             <span v-if="record.completed" class="roadmap-badge-completed">
               <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
@@ -109,23 +132,21 @@
             </span>
           </div>
 
-          <h2 class="roadmap-card-title">{{ record.title }}</h2>
-
-          <div v-if="parseCheckboxStats(resolvedContent(record)).total > 0" class="roadmap-progress">
+          <div v-if="getRecordStats(record).total > 0" class="roadmap-progress" :class="{ 'roadmap-progress-collapsed': isCollapsed(record.id) }">
             <div class="roadmap-progress-header">
               <span class="roadmap-progress-label">{{ t('roadmap.progress_label') }}</span>
-              <span class="roadmap-progress-count">{{ parseCheckboxStats(resolvedContent(record)).checked }}/{{ parseCheckboxStats(resolvedContent(record)).total }} ({{ progressPercent(parseCheckboxStats(resolvedContent(record))) }}%)</span>
+              <span class="roadmap-progress-count">{{ getRecordStats(record).checked }}/{{ getRecordStats(record).total }} ({{ progressPercent(getRecordStats(record)) }}%)</span>
             </div>
             <div class="roadmap-progress-bar">
-              <div class="roadmap-progress-fill" :style="{ width: progressPercent(parseCheckboxStats(resolvedContent(record))) + '%' }"></div>
+              <div class="roadmap-progress-fill" :style="{ width: progressPercent(getRecordStats(record)) + '%' }"></div>
             </div>
           </div>
 
-          <div v-if="renderedHtml[record.id]" class="roadmap-content" v-html="renderedHtml[record.id]"></div>
+          <div v-if="!isCollapsed(record.id) && renderedHtml[record.id]" class="roadmap-content" v-html="renderedHtml[record.id]"></div>
         </div>
 
         <!-- Toggle history button -->
-        <div v-if="total > 1" class="roadmap-history-toggle">
+        <div v-if="total > 2" class="roadmap-history-toggle">
           <button class="btn btn-ghost btn-lg" :disabled="loadingAll" @click="toggleHistory">
             <template v-if="loadingAll">
               <div class="roadmap-spinner roadmap-spinner-sm"></div>
@@ -150,6 +171,7 @@
         <ul class="footer-links">
           <li><a href="/">Home</a></li>
           <li><a href="/roadmap/">{{ t('nav.roadmap') }}</a></li>
+          <li><a :href="supportMailto">{{ supportEmail }}</a></li>
           <li><a href="https://github.com/Ddiidev/recordsaas" target="_blank" rel="noopener">GitHub</a></li>
         </ul>
         <div class="footer-copy">&copy; 2026 RecordSaaS. All rights reserved.</div>
@@ -159,6 +181,8 @@
 </template>
 
 <script setup lang="ts">
+import { SUPPORT_EMAIL, SUPPORT_MAILTO } from '../constants/support'
+
 useSeoMeta({
   title: 'Roadmap — RecordSaaS',
   description: 'See what we are building and what is coming next for RecordSaaS.',
@@ -184,6 +208,7 @@ const {
   showingAll,
   loadingAll,
   renderedHtml,
+  isCollapsed,
   setLang,
   toggleLangMenu,
   setTheme,
@@ -191,11 +216,15 @@ const {
   toggleMobileMenu,
   closeMobileMenu,
   resolvedContent,
-  parseCheckboxStats,
+  getRecordStats,
+  toggleRecordCollapse,
   toggleHistory,
   formatDate,
   progressPercent,
 } = useRoadmapPage()
+
+const supportEmail = SUPPORT_EMAIL
+const supportMailto = SUPPORT_MAILTO
 </script>
 
 <style scoped>
@@ -235,6 +264,41 @@ const {
 .roadmap-header p {
   font-size: 1.1rem;
   color: var(--text-muted);
+}
+
+.roadmap-support {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 20px;
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-card);
+}
+
+.roadmap-support-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--primary);
+}
+
+.roadmap-support-copy {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.roadmap-support-link {
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: none;
+}
+
+.roadmap-support-link:hover {
+  color: var(--primary);
 }
 
 /* States */
@@ -286,6 +350,40 @@ const {
   box-shadow: var(--card-shadow-hover);
 }
 
+.roadmap-card-collapsed {
+  padding-bottom: 24px;
+}
+
+.roadmap-card-toggle {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.roadmap-card-chevron {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.roadmap-card-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.roadmap-card-toggle:hover .roadmap-card-chevron {
+  color: var(--primary);
+}
+
 .roadmap-card-meta {
   display: flex;
   align-items: center;
@@ -318,9 +416,18 @@ const {
   margin-bottom: 20px;
 }
 
+.roadmap-card-toggle .roadmap-card-title {
+  margin-bottom: 0;
+}
+
 /* Progress bar */
 .roadmap-progress {
   margin-bottom: 24px;
+}
+
+.roadmap-progress-collapsed {
+  margin-top: 20px;
+  margin-bottom: 0;
 }
 
 .roadmap-progress-header {
@@ -543,6 +650,18 @@ const {
   display: flex;
   justify-content: center;
   margin-top: 16px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .nav-roadmap-active {

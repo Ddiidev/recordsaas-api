@@ -66,7 +66,7 @@ export default async (req: Request) => {
 
     const params = new URLSearchParams({
       sort: "-Id",
-      limit: showAll ? "100" : "1",
+      limit: showAll ? "100" : "2",
       fields: "Id,Title,Content,ContentPTbr,Completed,CreatedAt",
     });
 
