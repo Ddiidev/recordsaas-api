@@ -44,6 +44,8 @@ export function useLandingPage() {
   const isMobileMenuOpen = ref(false)
   const notification = ref<NotificationState | null>(null)
   const prefersDark = ref(false)
+  const showCheckoutModal = ref(false)
+  const pendingCheckoutPlan = ref<CheckoutPlan | null>(null)
 
   let systemMedia: MediaQueryList | null = null
   let systemThemeListener: ((event: MediaQueryListEvent) => void) | null = null
@@ -394,7 +396,25 @@ export function useLandingPage() {
     openGoogleLogin()
   }
 
-  async function checkout(plan: CheckoutPlan): Promise<void> {
+  function checkout(plan: CheckoutPlan): void {
+    pendingCheckoutPlan.value = plan
+    showCheckoutModal.value = true
+  }
+
+  function cancelCheckoutModal(): void {
+    showCheckoutModal.value = false
+    pendingCheckoutPlan.value = null
+  }
+
+  async function confirmCheckout(): Promise<void> {
+    const plan = pendingCheckoutPlan.value
+    if (!plan) return
+    showCheckoutModal.value = false
+    pendingCheckoutPlan.value = null
+    await doCheckout(plan)
+  }
+
+  async function doCheckout(plan: CheckoutPlan): Promise<void> {
     const email = currentUser.value?.email
     if (!email) {
       startCheckoutLogin(plan)
@@ -435,6 +455,16 @@ export function useLandingPage() {
             currentLang.value === 'pt-BR'
               ? 'Voce ja possui o plano vitalicio ativo. Nao e possivel contratar o vitalicio novamente.'
               : 'You already have an active lifetime plan. You cannot purchase lifetime again.',
+            'error',
+          )
+          return
+        }
+
+        if (res.status === 409 && errorPayload?.code === 'PREVIOUSLY_REFUNDED') {
+          showNotification(
+            currentLang.value === 'pt-BR'
+              ? 'Sua compra anterior foi reembolsada. Nao e possivel comprar o plano vitalicio novamente.'
+              : 'Your previous purchase was refunded. You cannot purchase the lifetime plan again.',
             'error',
           )
           return
@@ -497,7 +527,7 @@ export function useLandingPage() {
       const pendingPlan = localStorage.getItem('recordsaas_pending_checkout')
       if (pendingPlan === 'pro' || pendingPlan === 'lifetime') {
         localStorage.removeItem('recordsaas_pending_checkout')
-        await checkout(pendingPlan)
+        await doCheckout(pendingPlan)
       }
 
       const res = await fetch(`${getApiBase()}/api/auth/status`, {
@@ -614,6 +644,9 @@ export function useLandingPage() {
     toggleThemeMenu,
     downloadUrls,
     checkout,
+    showCheckoutModal,
+    confirmCheckout,
+    cancelCheckoutModal,
     logout,
     openGoogleLogin,
     openGoogleLoginAndCloseMobile,

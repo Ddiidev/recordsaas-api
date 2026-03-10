@@ -71,6 +71,11 @@ export const LANDING_I18N: Record<Language, Record<string, string>> = {
     'roadmap.hide_history': 'Hide previous roadmaps',
     'roadmap.back_home': 'Back to home',
     'roadmap.date_label': 'Published on',
+    'download.beta_note': 'May not work yet',
+    'checkout.beta_modal.title': 'Important: Mac & Linux are in Beta',
+    'checkout.beta_modal.body': 'Windows is the primary supported platform. Mac and Linux versions are currently in Beta and may not work as expected. You can still purchase, but be aware of this limitation.',
+    'checkout.beta_modal.cancel': 'Go back',
+    'checkout.beta_modal.confirm': 'I understand, continue',
   },
   'pt-BR': {
     'nav.features': 'Recursos',
@@ -142,5 +147,10 @@ export const LANDING_I18N: Record<Language, Record<string, string>> = {
     'roadmap.hide_history': 'Ocultar roadmaps anteriores',
     'roadmap.back_home': 'Voltar ao inicio',
     'roadmap.date_label': 'Publicado em',
+    'download.beta_note': 'Pode não funcionar',
+    'checkout.beta_modal.title': 'Atenção: Mac e Linux estão em Beta',
+    'checkout.beta_modal.body': 'Windows é a plataforma principal com suporte completo. Mac e Linux estão em Beta e podem não funcionar corretamente. Você pode continuar com a compra, mas esteja ciente dessa limitação.',
+    'checkout.beta_modal.cancel': 'Voltar',
+    'checkout.beta_modal.confirm': 'Entendido, continuar',
   },
 }

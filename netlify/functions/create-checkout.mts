@@ -380,6 +380,23 @@ export default async (req: Request, context: Context) => {
       }
 
       if (plan === "lifetime") {
+        // Block if customer was previously refunded
+        if (customer.metadata.recordsaas_refunded === "true") {
+          return new Response(
+            JSON.stringify({
+              error: "Previous lifetime purchase was refunded. Cannot purchase again.",
+              code: "PREVIOUSLY_REFUNDED",
+            }),
+            {
+              status: 409,
+              headers: {
+                "Content-Type": "application/json",
+                "Access-Control-Allow-Origin": "*",
+              },
+            }
+          );
+        }
+
         const activeLifetimeExists = await hasLifetimeLicense(stripe, customer);
         if (activeLifetimeExists) {
           return new Response(

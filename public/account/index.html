@@ -298,6 +298,7 @@
           <button class="btn btn-green" id="action-buy-credits" style="display: none;" onclick="buyCredits()">Buy +10 Credits</button>
           <a href="/#pricing" class="btn btn-green" id="action-upgrade-lifetime" style="display: none;">Upgrade to Lifetime</a>
           <button class="btn btn-danger" id="action-cancel-sub" style="display: none;" onclick="openCancelModal()">Cancel Subscription</button>
+          <button class="btn btn-danger" id="action-refund-lifetime" style="display: none;" onclick="openRefundModal()">Request Refund</button>
           <button class="btn btn-ghost" id="action-switch-free" style="display: none;" onclick="switchToFree()">Switch to Free</button>
           <span id="action-lifetime-note" style="display: none; color: var(--text-muted); font-size: 0.9rem;">Lifetime license - no action needed</span>
         </div>
@@ -310,7 +311,7 @@
     </div>
   </div>
 
-  <!-- Cancel Confirmation Modal -->
+  <!-- Cancel Subscription Modal -->
   <div class="modal-overlay" id="cancel-modal">
     <div class="modal">
       <h3>Cancel Subscription?</h3>
@@ -318,6 +319,19 @@
       <div class="btn-group" style="justify-content: flex-end;">
         <button class="btn btn-ghost" onclick="closeModal()">Keep Subscription</button>
         <button class="btn btn-danger" id="confirm-cancel-btn" onclick="confirmCancel()">Yes, Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Lifetime Refund Confirmation Modal -->
+  <div class="modal-overlay" id="refund-modal">
+    <div class="modal">
+      <h3>Request Refund?</h3>
+      <p>This will cancel your Lifetime license and issue a full refund. <strong>Your license will be deactivated immediately</strong> and you will not be able to purchase the Lifetime plan again.</p>
+      <p style="margin-top: 8px; font-size: 0.85rem; color: var(--text-muted);">Refunds are only available within 10 days of purchase.</p>
+      <div class="btn-group" style="justify-content: flex-end;">
+        <button class="btn btn-ghost" onclick="closeRefundModal()">Keep License</button>
+        <button class="btn btn-danger" id="confirm-refund-btn" onclick="confirmLifetimeRefund()">Yes, Refund</button>
       </div>
     </div>
   </div>
@@ -555,16 +569,25 @@
       const actionBuyCredits = document.getElementById('action-buy-credits');
       const actionUpgradeLifetime = document.getElementById('action-upgrade-lifetime');
       const actionCancelSub = document.getElementById('action-cancel-sub');
+      const actionRefundLifetime = document.getElementById('action-refund-lifetime');
       const actionSwitchFree = document.getElementById('action-switch-free');
       const actionLifetimeNote = document.getElementById('action-lifetime-note');
+
+      function isWithinRefundWindow(activatedAt) {
+        if (!activatedAt) return false;
+        const days = (Date.now() - new Date(activatedAt).getTime()) / (1000 * 60 * 60 * 24);
+        return days <= 10;
+      }
 
       function setActionVisibility(mode) {
         if (actionViewPlans) actionViewPlans.style.display = mode === 'free' ? 'inline-block' : 'none';
         if (actionBuyCredits) actionBuyCredits.style.display = mode === 'free' ? 'inline-block' : 'none';
         if (actionUpgradeLifetime) actionUpgradeLifetime.style.display = mode === 'pro' ? 'inline-block' : 'none';
         if (actionCancelSub) actionCancelSub.style.display = mode === 'pro' ? 'inline-block' : 'none';
+        const showRefund = mode === 'lifetime' && isWithinRefundWindow(license && license.activatedAt);
+        if (actionRefundLifetime) actionRefundLifetime.style.display = showRefund ? 'inline-block' : 'none';
         if (actionSwitchFree) actionSwitchFree.style.display = mode === 'pro' || mode === 'lifetime' ? 'inline-block' : 'none';
-        if (actionLifetimeNote) actionLifetimeNote.style.display = mode === 'lifetime' ? 'inline-block' : 'none';
+        if (actionLifetimeNote) actionLifetimeNote.style.display = mode === 'lifetime' && !showRefund ? 'inline-block' : 'none';
       }
 
       if (license && license.active) {
@@ -688,6 +711,48 @@
     // ======= CANCEL =======
     function openCancelModal() { document.getElementById('cancel-modal').classList.add('active'); }
     function closeModal() { document.getElementById('cancel-modal').classList.remove('active'); }
+
+    function openRefundModal() { document.getElementById('refund-modal').classList.add('active'); }
+    function closeRefundModal() { document.getElementById('refund-modal').classList.remove('active'); }
+
+    async function confirmLifetimeRefund() {
+      const btn = document.getElementById('confirm-refund-btn');
+      btn.textContent = 'Processing...';
+      btn.disabled = true;
+
+      try {
+        const res = await fetch(`${API_BASE}/api/cancel-subscription`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${sessionToken}`,
+          },
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          const code = data.code || '';
+          if (code === 'REFUND_WINDOW_EXPIRED') {
+            throw new Error('Refund window has expired. Refunds are only available within 10 days of purchase.');
+          } else if (code === 'ALREADY_REFUNDED') {
+            throw new Error('A refund has already been processed for this account.');
+          }
+          throw new Error(data.error || 'Failed to process refund');
+        }
+
+        closeRefundModal();
+        showToast('Refund processed. Your license has been deactivated.', 'success');
+
+        // Clear session and reload
+        setTimeout(() => fetchLicense(), 1500);
+      } catch (e) {
+        showToast(e.message || 'Failed to process refund. Please try again.', 'error');
+      } finally {
+        btn.textContent = 'Yes, Refund';
+        btn.disabled = false;
+      }
+    }
 
     async function confirmCancel() {
       const btn = document.getElementById('confirm-cancel-btn');
