@@ -274,7 +274,7 @@ const supportMailto = SUPPORT_MAILTO
   margin-top: 20px;
   padding: 12px 16px;
   border: 1px solid var(--border);
-  border-radius: 999px;
+  border-radius: 12px;
   background: var(--bg-card);
 }
 
