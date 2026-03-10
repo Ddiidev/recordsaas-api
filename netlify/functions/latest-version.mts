@@ -1,18 +1,16 @@
 import type { Config } from "@netlify/functions";
 
-type Platform = "windows" | "mac" | "linux";
+const GITHUB_REPO = "Ddiidev/recordsaas";
+const GITHUB_API_URL = `https://api.github.com/repos/${GITHUB_REPO}/releases/latest`;
 
-interface NocodbListResponse {
-  list: Array<Record<string, unknown>>;
-  pageInfo?: {
-    totalRows?: number;
-  };
+interface GitHubAsset {
+  name: string;
+  browser_download_url: string;
 }
 
-interface VersionRow {
-  record: Record<string, unknown>;
-  version: string;
-  semver: string | null;
+interface GitHubRelease {
+  tag_name: string;
+  assets: GitHubAsset[];
 }
 
 function jsonResponse(body: unknown, status = 200) {
@@ -21,340 +19,46 @@ function jsonResponse(body: unknown, status = 200) {
     headers: {
       "Content-Type": "application/json",
       "Access-Control-Allow-Origin": "*",
+      "Cache-Control": "public, max-age=300, s-maxage=300",
     },
   });
 }
 
-function compareSemver(a: string, b: string): number {
-  const [aMaj, aMin, aPatch] = a.split(".").map(Number);
-  const [bMaj, bMin, bPatch] = b.split(".").map(Number);
-  if (aMaj !== bMaj) return aMaj - bMaj;
-  if (aMin !== bMin) return aMin - bMin;
-  return aPatch - bPatch;
+function extractSemver(tag: string): string {
+  const match = tag.match(/\d+\.\d+\.\d+/);
+  return match?.[0] ?? tag;
 }
 
-function normalizeKey(input: string): string {
-  return input.toLowerCase().replace(/[^a-z0-9]/g, "");
-}
+function detectPlatformUrl(
+  assets: GitHubAsset[]
+): { windows: string | null; mac: string | null; linux: string | null } {
+  let windows: string | null = null;
+  let mac: string | null = null;
+  let linux: string | null = null;
 
-function asNonEmptyString(value: unknown): string | null {
-  if (typeof value === "string") {
-    const trimmed = value.trim();
-    return trimmed.length > 0 ? trimmed : null;
-  }
+  for (const asset of assets) {
+    const name = asset.name.toLowerCase();
 
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return String(value);
-  }
-
-  return null;
-}
-
-function keyMatchesAlias(key: string, aliases: string[]): boolean {
-  const normalized = normalizeKey(key);
-  return aliases.some((alias) => normalizeKey(alias) === normalized);
-}
-
-function keyContainsAllTokens(key: string, tokens: string[]): boolean {
-  const normalized = normalizeKey(key);
-  return tokens.every((token) => normalized.includes(normalizeKey(token)));
-}
-
-function extractSemver(value: string): string | null {
-  const match = value.match(/\d+\.\d+\.\d+/);
-  return match?.[0] ?? null;
-}
-
-function asBoolean(value: unknown): boolean | null {
-  if (typeof value === "boolean") return value;
-  if (typeof value === "number") {
-    if (value === 1) return true;
-    if (value === 0) return false;
-    return null;
-  }
-
-  if (typeof value === "string") {
-    const normalized = value.trim().toLowerCase();
-    if (["true", "1", "yes", "y", "sim"].includes(normalized)) return true;
-    if (["false", "0", "no", "n", "nao", "não"].includes(normalized)) return false;
-  }
-
-  return null;
-}
-
-function extractUrlFromValue(value: unknown): string | null {
-  const direct = asNonEmptyString(value);
-  if (direct) return direct;
-
-  if (Array.isArray(value)) {
-    for (const item of value) {
-      const nested = extractUrlFromValue(item);
-      if (nested) return nested;
+    if (!windows && (name.endsWith(".exe") || name.endsWith(".msi"))) {
+      windows = asset.browser_download_url;
     }
-    return null;
-  }
 
-  if (value && typeof value === "object") {
-    const objectValue = value as Record<string, unknown>;
-    const urlKeys = [
-      "url",
-      "signedUrl",
-      "signed_url",
-      "downloadUrl",
-      "download_url",
-      "path",
-    ];
+    if (!mac && (name.endsWith(".dmg") || (name.endsWith(".zip") && (name.includes("mac") || name.includes("darwin"))))) {
+      mac = asset.browser_download_url;
+    }
 
-    for (const key of urlKeys) {
-      const candidate = asNonEmptyString(objectValue[key]);
-      if (candidate) return candidate;
+    if (
+      !linux &&
+      (name.endsWith(".appimage") ||
+        name.endsWith(".deb") ||
+        name.endsWith(".rpm") ||
+        (name.endsWith(".zip") && name.includes("linux")))
+    ) {
+      linux = asset.browser_download_url;
     }
   }
 
-  return null;
-}
-
-function findStringByAliases(
-  record: Record<string, unknown>,
-  aliases: string[],
-  tokenGroups: string[][] = []
-): string | null {
-  for (const [key, value] of Object.entries(record)) {
-    if (!keyMatchesAlias(key, aliases)) continue;
-    const candidate = asNonEmptyString(value);
-    if (candidate) return candidate;
-  }
-
-  for (const tokens of tokenGroups) {
-    for (const [key, value] of Object.entries(record)) {
-      if (!keyContainsAllTokens(key, tokens)) continue;
-      const candidate = asNonEmptyString(value);
-      if (candidate) return candidate;
-    }
-  }
-
-  return null;
-}
-
-function findUrlByAliases(
-  record: Record<string, unknown>,
-  aliases: string[],
-  tokenGroups: string[][] = []
-): string | null {
-  for (const [key, value] of Object.entries(record)) {
-    if (!keyMatchesAlias(key, aliases)) continue;
-    const candidate = extractUrlFromValue(value);
-    if (candidate) return candidate;
-  }
-
-  for (const tokens of tokenGroups) {
-    for (const [key, value] of Object.entries(record)) {
-      if (!keyContainsAllTokens(key, tokens)) continue;
-      const candidate = extractUrlFromValue(value);
-      if (candidate) return candidate;
-    }
-  }
-
-  return null;
-}
-
-function detectPlatform(value: string): Platform | null {
-  const normalized = value.toLowerCase();
-
-  if (normalized.includes("win")) return "windows";
-  if (
-    normalized.includes("mac") ||
-    normalized.includes("osx") ||
-    normalized.includes("darwin")
-  ) {
-    return "mac";
-  }
-  if (
-    normalized.includes("linux") ||
-    normalized.includes("ubuntu") ||
-    normalized.includes("debian")
-  ) {
-    return "linux";
-  }
-
-  return null;
-}
-
-function extractVersionRows(records: Array<Record<string, unknown>>): VersionRow[] {
-  const versionAliases = [
-    "Version",
-    "SetupVersion",
-    "LatestVersion",
-    "ReleaseVersion",
-    "AppVersion",
-  ];
-
-  return records.flatMap((record) => {
-    const rawVersion = findStringByAliases(record, versionAliases, [["version"]]);
-    if (!rawVersion) return [];
-
-    const semver = extractSemver(rawVersion);
-    return [
-      {
-        record,
-        version: semver ?? rawVersion,
-        semver,
-      },
-    ];
-  });
-}
-
-function isRecordActive(record: Record<string, unknown>): boolean {
-  for (const [key, value] of Object.entries(record)) {
-    if (!keyMatchesAlias(key, ["Active", "IsActive", "Enabled"])) continue;
-    return asBoolean(value) === true;
-  }
-
-  for (const [key, value] of Object.entries(record)) {
-    if (!keyContainsAllTokens(key, ["active"])) continue;
-    return asBoolean(value) === true;
-  }
-
-  return false;
-}
-
-function pickLatestVersion(rows: VersionRow[]): string | null {
-  const semverRows = rows.filter((row) => row.semver !== null) as Array<
-    VersionRow & { semver: string }
-  >;
-
-  if (semverRows.length > 0) {
-    return [...semverRows].sort((a, b) => compareSemver(a.semver, b.semver)).at(-1)!
-      .semver;
-  }
-
-  return rows[0]?.version ?? null;
-}
-
-function extractPlatformSpecificUrl(
-  record: Record<string, unknown>,
-  platform: Platform
-): string | null {
-  if (platform === "windows") {
-    return findUrlByAliases(
-      record,
-      [
-        "Windows",
-        "WindowsUrl",
-        "WindowsURL",
-        "WindowsDownloadUrl",
-        "WindowsDownloadURL",
-        "WindowsLink",
-        "WindowsSetupUrl",
-      ],
-      [
-        ["windows"],
-        ["win", "download"],
-        ["win", "url"],
-      ]
-    );
-  }
-
-  if (platform === "mac") {
-    return findUrlByAliases(
-      record,
-      [
-        "Mac",
-        "MacUrl",
-        "MacURL",
-        "MacOsUrl",
-        "MacOSUrl",
-        "MacDownloadUrl",
-        "MacLink",
-        "MacSetupUrl",
-        "OsxUrl",
-      ],
-      [
-        ["mac"],
-        ["macos"],
-        ["osx"],
-      ]
-    );
-  }
-
-  return findUrlByAliases(
-    record,
-    [
-      "Linux",
-      "LinuxUrl",
-      "LinuxURL",
-      "LinuxDownloadUrl",
-      "LinuxLink",
-      "LinuxSetupUrl",
-      "UbuntuUrl",
-      "UbuntuDownloadUrl",
-    ],
-    [
-      ["linux"],
-      ["ubuntu"],
-    ]
-  );
-}
-
-function extractGenericDownloadUrl(record: Record<string, unknown>): string | null {
-  return findUrlByAliases(
-    record,
-    [
-      "DownloadUrl",
-      "DownloadURL",
-      "Url",
-      "URL",
-      "Link",
-      "FileUrl",
-      "InstallerUrl",
-      "SetupUrl",
-      "BinaryUrl",
-    ],
-    [
-      ["download"],
-      ["link"],
-      ["url"],
-      ["installer"],
-      ["setup"],
-    ]
-  );
-}
-
-function aggregateDownloads(
-  records: Array<Record<string, unknown>>
-): Partial<Record<Platform, string>> {
-  const downloads: Partial<Record<Platform, string>> = {};
-
-  for (const record of records) {
-    for (const platform of ["windows", "mac", "linux"] as Platform[]) {
-      if (downloads[platform]) continue;
-      const platformUrl = extractPlatformSpecificUrl(record, platform);
-      if (platformUrl) {
-        downloads[platform] = platformUrl;
-      }
-    }
-
-    const platformValue = findStringByAliases(record, [
-      "Platform",
-      "OS",
-      "OperatingSystem",
-      "TargetPlatform",
-      "TargetOS",
-      "Sistema",
-    ]);
-
-    if (!platformValue) continue;
-
-    const detectedPlatform = detectPlatform(platformValue);
-    if (!detectedPlatform || downloads[detectedPlatform]) continue;
-
-    const genericUrl = extractGenericDownloadUrl(record);
-    if (genericUrl) {
-      downloads[detectedPlatform] = genericUrl;
-    }
-  }
-
-  return downloads;
+  return { windows, mac, linux };
 }
 
 export default async (req: Request) => {
@@ -373,112 +77,45 @@ export default async (req: Request) => {
     return jsonResponse({ error: "Method not allowed" }, 405);
   }
 
-  const configuredBaseUrl = Netlify.env.get("NOCODB_BASE_URL");
-  const baseUrls = Array.from(
-    new Set(
-      [configuredBaseUrl, "https://app.nocodb.com"]
-        .filter((value): value is string => Boolean(value))
-        .map((value) => value.replace(/\/+$/, ""))
-    )
-  );
-  const configuredTableId =
-    Netlify.env.get("NOCODB_SETUP_VERSIONS_TABLE_ID") ||
-    Netlify.env.get("NOCODB_SETUPVERSIONS_TABLE_ID") ||
-    Netlify.env.get("NOCODB_LATEST_VERSION_TABLE_ID");
-  const tableIds = Array.from(
-    new Set([configuredTableId, "SetupVersions"].filter((value): value is string => Boolean(value)))
-  );
-  const apiToken = Netlify.env.get("NOCODB_API_TOKEN");
-
-  if (!apiToken) {
-    console.error("[latest-version] Missing NOCODB_API_TOKEN");
-    return jsonResponse({ error: "Server configuration error" }, 500);
-  }
-
   try {
-    const params = new URLSearchParams({
-      sort: "-Id",
-      limit: "200",
-    });
+    const headers: Record<string, string> = {
+      Accept: "application/vnd.github+json",
+      "User-Agent": "RecordSaaS-Landing",
+    };
 
-    let records: Array<Record<string, unknown>> | null = null;
-    let lastError: { status: number; body: string; apiUrl: string } | null = null;
-
-    for (const baseUrl of baseUrls) {
-      for (const tableId of tableIds) {
-        const apiUrl = `${baseUrl}/api/v2/tables/${tableId}/records?${params}`;
-        const response = await fetch(apiUrl, {
-          headers: {
-            "xc-token": apiToken,
-          },
-        });
-
-        if (!response.ok) {
-          const body = await response.text();
-          lastError = { status: response.status, body, apiUrl };
-          console.error("[latest-version] NocoDB API error:", response.status, body, "url:", apiUrl);
-          continue;
-        }
-
-        const data = (await response.json()) as NocodbListResponse;
-        records = data.list || [];
-        break;
-      }
-
-      if (records) break;
+    const githubToken = Netlify.env.get("GITHUB_TOKEN");
+    if (githubToken) {
+      headers.Authorization = `Bearer ${githubToken}`;
     }
 
-    if (!records) {
-      if (lastError) {
-        console.error(
-          "[latest-version] All NocoDB attempts failed. Last attempt:",
-          lastError.status,
-          lastError.body,
-          "url:",
-          lastError.apiUrl
-        );
-      }
-      return jsonResponse({ error: "Failed to fetch setup versions" }, 502);
+    const response = await fetch(GITHUB_API_URL, { headers });
+
+    if (!response.ok) {
+      const body = await response.text();
+      console.error("[latest-version] GitHub API error:", response.status, body);
+      return jsonResponse({ error: "Failed to fetch latest release from GitHub" }, 502);
     }
 
-    if (records.length === 0) {
-      return jsonResponse({ error: "No versions found" }, 404);
-    }
+    const release = (await response.json()) as GitHubRelease;
+    const version = extractSemver(release.tag_name);
+    const downloads = detectPlatformUrl(release.assets);
 
-    const versionRows = extractVersionRows(records);
-    const activeVersionRows = versionRows.filter((row) => isRecordActive(row.record));
-    const latestVersion = pickLatestVersion(activeVersionRows);
-
-    if (!latestVersion) {
-      return jsonResponse({ error: "No active version found in SetupVersions" }, 404);
-    }
-
-    const latestVersionRows = activeVersionRows
-      .filter((row) => row.version === latestVersion || row.semver === latestVersion)
-      .map((row) => row.record);
-
-    const downloads = aggregateDownloads(latestVersionRows);
-
-    const missingPlatforms = (["windows", "mac", "linux"] as Platform[]).filter(
-      (platform) => !downloads[platform]
+    const missingPlatforms = (["windows", "mac", "linux"] as const).filter(
+      (p) => !downloads[p]
     );
 
     if (missingPlatforms.length > 0) {
       console.error(
-        `[latest-version] Missing download links for ${missingPlatforms.join(", ")} in SetupVersions (version ${latestVersion})`
-      );
-      return jsonResponse(
-        { error: `Missing download links for version ${latestVersion}` },
-        502
+        `[latest-version] Missing download links for ${missingPlatforms.join(", ")} in release ${release.tag_name}`
       );
     }
 
     return jsonResponse({
-      version: latestVersion,
+      version,
       downloads: {
-        windows: downloads.windows!,
-        mac: downloads.mac!,
-        linux: downloads.linux!,
+        windows: downloads.windows ?? "",
+        mac: downloads.mac ?? "",
+        linux: downloads.linux ?? "",
       },
     });
   } catch (error) {

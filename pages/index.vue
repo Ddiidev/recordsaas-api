@@ -174,6 +174,11 @@
           </div>
         </a>
       </div>
+      <div v-if="appVersion" class="hero-version-info animate-in delay-3">
+        <span class="version-label">{{ t('download.version') }}: <strong>v{{ appVersion }}</strong></span>
+        <span class="version-separator">|</span>
+        <a href="/roadmap/" class="version-roadmap-link">{{ t('download.roadmap') }} &rarr;</a>
+      </div>
       <div class="hero-screenshot animate-in delay-4">
         <img src="/assets/app-screenshot.webp" alt="RecordSaaS editor" id="hero-img">
       </div>
@@ -404,6 +409,7 @@ const {
   setTheme,
   toggleThemeMenu,
   downloadUrls,
+  appVersion,
   checkout,
   showCheckoutModal,
   confirmCheckout,

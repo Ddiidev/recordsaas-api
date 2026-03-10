@@ -53,6 +53,7 @@ export function useLandingPage() {
   let scrollObserver: IntersectionObserver | null = null
 
   const downloadUrls = ref<{ windows: string; mac: string; linux: string } | null>(null)
+  const appVersion = ref<string | null>(null)
 
   function safeApiBase(raw: string | null): string {
     const fallback = window.location.origin.replace(/\/$/, '')
@@ -207,6 +208,9 @@ export function useLandingPage() {
       const data = await res.json()
       if (data.downloads) {
         downloadUrls.value = data.downloads
+      }
+      if (data.version) {
+        appVersion.value = data.version
       }
     } catch {
       // silently fail — buttons mantêm href="#"
@@ -643,6 +647,7 @@ export function useLandingPage() {
     setTheme,
     toggleThemeMenu,
     downloadUrls,
+    appVersion,
     checkout,
     showCheckoutModal,
     confirmCheckout,

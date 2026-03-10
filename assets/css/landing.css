@@ -552,7 +552,42 @@ img {
   justify-content: center;
   gap: 16px;
   flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.hero-version-info {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
   margin-bottom: 60px;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.hero-version-info .version-label {
+  opacity: 0.85;
+}
+
+.hero-version-info .version-label strong {
+  color: var(--primary);
+  font-weight: 600;
+}
+
+.hero-version-info .version-separator {
+  opacity: 0.35;
+}
+
+.hero-version-info .version-roadmap-link {
+  color: var(--primary);
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.2s;
+}
+
+.hero-version-info .version-roadmap-link:hover {
+  opacity: 0.8;
+  text-decoration: underline;
 }
 
 .btn-download {
